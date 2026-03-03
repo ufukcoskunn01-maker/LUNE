@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import {
   Area,
   AreaChart,
@@ -26,6 +27,14 @@ type Series = {
 
 const PIE_COLORS = ["#0284c7", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"];
 
+function useChartsReady(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+}
+
 export function TrendLines({
   data,
   xKey,
@@ -37,6 +46,8 @@ export function TrendLines({
   series: Series[];
   height?: number;
 }) {
+  const ready = useChartsReady();
+  if (!ready) return <div className="h-[280px] w-full" style={{ height }} />;
   return (
     <div className="h-[280px] w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -80,6 +91,8 @@ export function TrendArea({
   lineColor: string;
   height?: number;
 }) {
+  const ready = useChartsReady();
+  if (!ready) return <div className="w-full" style={{ height }} />;
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -107,6 +120,8 @@ export function StackedBars({
   bars: Series[];
   height?: number;
 }) {
+  const ready = useChartsReady();
+  if (!ready) return <div className="w-full" style={{ height }} />;
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -138,6 +153,8 @@ export function SimpleBars({
   color: string;
   height?: number;
 }) {
+  const ready = useChartsReady();
+  if (!ready) return <div className="w-full" style={{ height }} />;
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -164,6 +181,8 @@ export function DonutChart({
   nameKey: string;
   height?: number;
 }) {
+  const ready = useChartsReady();
+  if (!ready) return <div className="w-full" style={{ height }} />;
   return (
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">

@@ -20,6 +20,22 @@ type FileRow = {
   file_name: string;
   file_kind: string | null;
   revision: string | null;
+  ingest_status: string | null;
+  parse_error: string | null;
+  last_error: string | null;
+  uploaded_at: string | null;
+  processing_started_at: string | null;
+  processing_finished_at: string | null;
+  processed_at: string | null;
+  last_retry_at: string | null;
+  parser_version: string | null;
+  warning_count: number | null;
+  rows_count: number | null;
+  parsed_material_rows: number | null;
+  parsed_labor_rows: number | null;
+  inserted_material_rows: number | null;
+  inserted_labor_rows: number | null;
+  distinct_row_dates: unknown;
   updated_at: string | null;
 };
 
@@ -57,6 +73,7 @@ type MaterialRow = {
   description: string | null;
   unit: string | null;
   qty: number | null;
+  report_date: string | null;
   crew: number | null;
   raw: Record<string, unknown> | null;
 };
@@ -180,7 +197,7 @@ export async function GET(req: Request) {
 
     const filesRes = await admin
       .from("field_installation_files")
-      .select("id,project_code,work_date,bucket_id,storage_path,file_name,file_kind,revision,updated_at")
+      .select("id,project_code,work_date,bucket_id,storage_path,file_name,file_kind,revision,ingest_status,parse_error,last_error,uploaded_at,processing_started_at,processing_finished_at,processed_at,last_retry_at,parser_version,warning_count,rows_count,parsed_material_rows,parsed_labor_rows,inserted_material_rows,inserted_labor_rows,distinct_row_dates,updated_at")
       .eq("project_code", projectCode)
       .eq("work_date", date)
       .returns<FileRow[]>();
@@ -214,7 +231,7 @@ export async function GET(req: Request) {
         .maybeSingle<SummaryRow>(),
       admin
         .from("field_installation_rows")
-        .select("id,project_code,work_date,source_file_id,zone,floor,budget_code,activity_code,description,unit,qty,crew,raw")
+        .select("id,project_code,work_date,source_file_id,zone,floor,budget_code,activity_code,description,unit,qty,report_date,crew,raw")
         .eq("source_file_id", latestFile.id)
         .order("zone", { ascending: true })
         .order("floor", { ascending: true })
@@ -285,6 +302,7 @@ export async function GET(req: Request) {
         description: row.description,
         unit: row.unit,
         qty: row.qty,
+        report_date: row.report_date,
         manhours: toNumber(raw.manhours),
         team_no: row.crew,
         elevation: raw.elevation ? String(raw.elevation) : null,
@@ -320,12 +338,33 @@ export async function GET(req: Request) {
         updated_at: latestFile.updated_at,
       } as const);
 
+    const distinctReportDates = Array.from(new Set(rows.map((row) => row.report_date).filter(Boolean))).sort();
+
     return NextResponse.json({
       ok: true,
       data: {
         file: latestFile,
         summary: normalizedSummary,
         rows,
+        ingest: {
+          status: latestFile.ingest_status || "uploaded",
+          parse_error: latestFile.parse_error || latestFile.last_error || null,
+          uploaded_at: latestFile.uploaded_at || null,
+          processing_started_at: latestFile.processing_started_at || null,
+          processing_finished_at: latestFile.processing_finished_at || null,
+          processed_at: latestFile.processed_at || null,
+          last_retry_at: latestFile.last_retry_at || null,
+          parser_version: latestFile.parser_version || null,
+          warning_count: latestFile.warning_count ?? 0,
+          parsed_material_rows: latestFile.parsed_material_rows ?? 0,
+          parsed_labor_rows: latestFile.parsed_labor_rows ?? 0,
+          inserted_material_rows: latestFile.inserted_material_rows ?? rows.length,
+          inserted_labor_rows: latestFile.inserted_labor_rows ?? 0,
+          distinct_row_dates:
+            Array.isArray(latestFile.distinct_row_dates) && latestFile.distinct_row_dates.length
+              ? latestFile.distinct_row_dates
+              : distinctReportDates,
+        },
       },
     });
   } catch (error) {

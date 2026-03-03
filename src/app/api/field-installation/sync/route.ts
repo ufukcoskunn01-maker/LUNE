@@ -478,6 +478,12 @@ export async function POST(req: Request) {
               file_kind: "installation",
               revision: parseRevision(fileName),
               source_created_at: new Date().toISOString(),
+              ingest_status: "queued",
+              parse_error: null,
+              last_error: null,
+              uploaded_at: new Date().toISOString(),
+              processing_started_at: null,
+              processing_finished_at: null,
             },
             { onConflict: "bucket_id,storage_path" }
           );

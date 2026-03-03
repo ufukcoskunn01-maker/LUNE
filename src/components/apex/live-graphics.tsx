@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useSyncExternalStore } from "react";
 import {
   Area,
   AreaChart,
@@ -62,6 +63,20 @@ function amountLabel(value: number): string {
   if (value === 0) return "-";
   if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
   return `$${value}`;
+}
+
+function useChartsReady(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+}
+
+function SafeResponsiveContainer({ children }: { children: ReactNode }) {
+  const ready = useChartsReady();
+  if (!ready) return null;
+  return <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>;
 }
 
 function LiveCard({
@@ -130,7 +145,7 @@ export function ForecastCurveCard({
       </div>
 
       <div className="h-[320px] px-2 pb-4">
-        <ResponsiveContainer width="100%" height="100%">
+        <SafeResponsiveContainer>
           <AreaChart data={data} margin={{ top: 8, right: 24, left: 4, bottom: 8 }}>
             <defs>
               <linearGradient id="forecast-live-fill" x1="0" y1="0" x2="0" y2="1">
@@ -181,7 +196,7 @@ export function ForecastCurveCard({
             />
             <Legend wrapperStyle={{ color: "rgba(255,255,255,0.75)", fontSize: 12 }} />
           </AreaChart>
-        </ResponsiveContainer>
+        </SafeResponsiveContainer>
       </div>
 
       <div className="border-t border-white/10 px-6 py-4 text-sm text-zinc-300">
@@ -452,7 +467,7 @@ export function MomentumCard({
         </p>
       </div>
       <div className="h-[320px] px-2 pb-4 pt-2">
-        <ResponsiveContainer width="100%" height="100%">
+        <SafeResponsiveContainer>
           <LineChart data={data} margin={{ top: 14, right: 18, left: 4, bottom: 8 }}>
             <defs>
               <linearGradient id="momentum-fill" x1="0" y1="0" x2="0" y2="1">
@@ -475,7 +490,7 @@ export function MomentumCard({
             <Line type="monotone" dataKey="previous" stroke="rgba(255,255,255,0.55)" strokeDasharray="6 4" dot={false} strokeWidth={2} />
             <Line type="monotone" dataKey="current" stroke="#2ea7ff" dot={false} strokeWidth={3} />
           </LineChart>
-        </ResponsiveContainer>
+        </SafeResponsiveContainer>
       </div>
     </LiveCard>
   );
@@ -494,7 +509,7 @@ export function AllocationDonutCard({
     <LiveCard title="Category Breakdown" className={className}>
       <div className="grid gap-4 p-6 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="h-[330px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <SafeResponsiveContainer>
             <PieChart>
               <Pie data={items} dataKey="share" nameKey="name" innerRadius={84} outerRadius={126} paddingAngle={2}>
                 {items.map((item) => (
@@ -504,7 +519,7 @@ export function AllocationDonutCard({
               <Tooltip formatter={(value: number) => `${value}%`} contentStyle={{ background: "#05070d", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12 }} />
               <Legend wrapperStyle={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }} />
             </PieChart>
-          </ResponsiveContainer>
+          </SafeResponsiveContainer>
         </div>
         <div className="space-y-3">
           <p className="text-4xl font-semibold">{totalLabel}</p>

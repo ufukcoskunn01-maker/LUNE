@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   Bar,
   BarChart,
@@ -123,6 +124,20 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     throw new Error(payload?.error || `Request failed (${res.status})`);
   }
   return payload.data;
+}
+
+function useChartsReady(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+}
+
+function SafeResponsiveContainer({ children }: { children: ReactNode }) {
+  const ready = useChartsReady();
+  if (!ready) return null;
+  return <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>;
 }
 
 export default function TransportationWorkspace(props: TransportWorkspaceProps) {
@@ -553,7 +568,7 @@ export default function TransportationWorkspace(props: TransportWorkspaceProps) 
             ) : errorMonth ? (
               <div className="flex h-full items-center justify-center text-sm text-red-300">{errorMonth}</div>
             ) : chartData.length ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <SafeResponsiveContainer>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
                   <XAxis dataKey="day" stroke="#a1a1aa" tick={{ fontSize: 11 }} />
@@ -564,7 +579,7 @@ export default function TransportationWorkspace(props: TransportWorkspaceProps) 
                   <Bar dataKey="morning" fill="#22c55e" name="Morning" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="evening" fill="#f97316" name="Evening" radius={[4, 4, 0, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
+              </SafeResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-zinc-400">No monthly data yet.</div>
             )}
