@@ -98,22 +98,20 @@ npm run build
    - Selecting a day loads rows/totals/pivots and crew.
    - Month export downloads CSV/XLSX matrix.
 
-## Daily Installation Reports (Field Reports) Setup
+## Daily Installation Reports Setup (Single DB-First Pipeline)
 
 1. Run migration:
-   - `supabase/migrations/202602251600_field_reports.sql`
-2. Optional env overrides:
-   - `SUPABASE_STORAGE_BUCKET` (defaults to `imports`)
-   - `FIELD_REPORTS_ROOT_PREFIX` (defaults to `${projectCode}/2-Daily Field Reports`)
+   - `supabase/migrations/202603031000_daily_installation_reports_pipeline.sql`
+2. Ensure env vars are set:
+   - `SUPABASE_STORAGE_BUCKET` (defaults to `project-files`)
 3. Open `/daily-installation-reports`.
-4. Click **Sync from Storage** to scan `${projectCode}/2-Daily Field Reports` and upsert metadata.
-5. Select a date and use:
-   - **Retry import** (import from storage metadata by date), or
-   - **Upload & Import** (manual file upload + parse).
-6. Verify:
-   - Month calendar statuses change (`Missing`, `Pending`, `OK`, `Failed`).
-   - Day `Summary`/`Items`/`Personnel` tabs load data.
-   - **Export month** downloads CSV/XLSX.
+4. Upload a `.xlsx` / `.xlsm` report from the page.
+5. Verify:
+   - A file row is inserted into `daily_installation_report_files` with status lifecycle:
+     `uploaded -> processing -> ready` (or `failed`).
+   - Parsed summary is persisted in `daily_installation_reports`.
+   - Parsed line items are persisted in `daily_installation_report_items`.
+   - UI updates live from database realtime events without storage listing.
 
 ## Learn More
 
