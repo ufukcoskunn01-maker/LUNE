@@ -1,0 +1,471 @@
+﻿.env.example
+.github/CODEOWNERS
+.github/pull_request_template.md
+.github/workflows/ci.yml
+.gitignore
+HOURLY_SYNC_SETUP.md
+README.md
+_archive/attendance_group/page.tsx
+_archive/attendance_root/page.tsx
+_archive/dashboard.old.tsx
+_archive/dashboard_root/page.tsx
+_zip_tmp/extracted/--.textClipping
+_zip_tmp/extracted/css/origin-076ed8.webflow.shared.4f4a807d7.css
+_zip_tmp/extracted/css/slick.min.css
+_zip_tmp/extracted/fonts/68acbc6e9832d8edc91f625b_LyonDisplay-Light-Trial.otf
+_zip_tmp/extracted/fonts/68acbc6ea208b728ef351d78_LyonDisplay-LightItalic-Trial.otf
+_zip_tmp/extracted/fonts/68acbc6ef1b9c827b523f364_LyonDisplay-Regular-Trial.otf
+_zip_tmp/extracted/fonts/68acbd085a174326256d7272_SuisseIntlTrial-Book.otf
+_zip_tmp/extracted/fonts/68b750bb2b4d0ef73f0c40c1_SuisseIntl-Book.ttf
+_zip_tmp/extracted/fonts/68b7510852b05cbbfafd6927_SuisseIntl-Light.otf
+_zip_tmp/extracted/fonts/68b752a8b15bb9cb1fef23ba_LyonDisplay-LightItalic-App.ttf
+_zip_tmp/extracted/fonts/68b752a965188e52d8ba5195_LyonDisplay-Light-App.ttf
+_zip_tmp/extracted/fonts/68be902d5f740a290c36247a_SuisseIntl-Medium.ttf
+_zip_tmp/extracted/fonts/68be902db354943c23cc820e_SuisseIntl-Bold.ttf
+_zip_tmp/extracted/fonts/68be902df135e6113e47d3db_SuisseIntl-Regular.ttf
+_zip_tmp/extracted/images/68acbf05f9c3214369b19570_ArrowRight.svg
+_zip_tmp/extracted/images/68acc0dd9b190be3a4886ccb_up-arrow.svg
+_zip_tmp/extracted/images/68acccfaa258c2a8cbe1b4e8_3_Card_-p-500.png
+_zip_tmp/extracted/images/68acccfaa258c2a8cbe1b4e8_3_Card_-p-800.png
+_zip_tmp/extracted/images/68acccfaa258c2a8cbe1b4e8_3_Card_.png
+_zip_tmp/extracted/images/68acccfae513691732224781_5_Card_-p-500.png
+_zip_tmp/extracted/images/68acccfae513691732224781_5_Card_-p-800.png
+_zip_tmp/extracted/images/68acccfae513691732224781_5_Card_.png
+_zip_tmp/extracted/images/68acd078571a5d311d25fee7_manage.svg
+_zip_tmp/extracted/images/68acd2db507fa7c358f3bf43_Group 48100208-p-1080.png
+_zip_tmp/extracted/images/68acd2db507fa7c358f3bf43_Group 48100208-p-1600.avif
+_zip_tmp/extracted/images/68acd2db507fa7c358f3bf43_Group 48100208-p-500.avif
+_zip_tmp/extracted/images/68acd2db507fa7c358f3bf43_Group 48100208-p-800.png
+_zip_tmp/extracted/images/68acd2db507fa7c358f3bf43_Group 48100208.avif
+_zip_tmp/extracted/images/68acd3d1459c4533e7d4649a_stars.svg
+_zip_tmp/extracted/images/68acd5283e22423f13fa59a3_Frame 1171277263.png
+_zip_tmp/extracted/images/68acd528532db4e79e21bd27_666b21044c70f1d6377cef513b8b46f8_Frame 1171277262.png
+_zip_tmp/extracted/images/68acd528c25e85a31ee91cea_aea62ac5e3b1a484ce8af496bc9356fd_Frame 1171277260.png
+_zip_tmp/extracted/images/68acd528eff05fd8f147b257_Frame 1171277261.png
+_zip_tmp/extracted/images/68acd7a5e5cde3d99e192e5e_54389a561455c6d1a4fd45db9a022b82_certificate-img.svg
+_zip_tmp/extracted/images/68acd7c24626801554c0de6c_Device 13PM.avif
+_zip_tmp/extracted/images/68acd82646629c5e94323829_Group 48100209-p-1080.avif
+_zip_tmp/extracted/images/68acd82646629c5e94323829_Group 48100209-p-500.avif
+_zip_tmp/extracted/images/68acd82646629c5e94323829_Group 48100209-p-800.avif
+_zip_tmp/extracted/images/68acd82646629c5e94323829_Group 48100209.avif
+_zip_tmp/extracted/images/68acd9870cd6bd06f59452e5_Vector.svg
+_zip_tmp/extracted/images/68acdab71a7e9076acceea95_Group 48099573.svg
+_zip_tmp/extracted/images/68acdab77d5044272816ea2e_Group 48099572.svg
+_zip_tmp/extracted/images/68acdab78f3adff17297216d_Group 48099302.svg
+_zip_tmp/extracted/images/68acdab7ac689f715a5f7ab8_Group 48100210.svg
+_zip_tmp/extracted/images/68acdab7b486ec00160c181f_Group 48100211.svg
+_zip_tmp/extracted/images/68acdab7c041fa9d7c650843_Group 48099570.svg
+_zip_tmp/extracted/images/68acdb766e599845a105d124_Group 48099246.svg
+_zip_tmp/extracted/images/68ace085523f69f53bf899cf_logo.svg
+_zip_tmp/extracted/images/68addfe5b5ebdbf6f5d59eaa_Union.svg
+_zip_tmp/extracted/images/68ade4d51f31e1e9f347cf81_Frame 1171277095.jpg
+_zip_tmp/extracted/images/68ade502cb28cdafcd93510c_Frame 1171277096.jpg
+_zip_tmp/extracted/images/68ade51d592c71c8975df4b7_Frame 48100179.jpg
+_zip_tmp/extracted/images/68af10558a04078593d8f7ce_Group 48100214.png
+_zip_tmp/extracted/images/68b7555efe58911d1050d3e4_1b7239eb1b5f8e3b968aebdff411859a_6_Card_.svg
+_zip_tmp/extracted/images/68bb319d2327f0531c6d5b7f_phone1-p-1080.png
+_zip_tmp/extracted/images/68bb319d2327f0531c6d5b7f_phone1-p-1600.png
+_zip_tmp/extracted/images/68bb319d2327f0531c6d5b7f_phone1-p-500.png
+_zip_tmp/extracted/images/68bb319d2327f0531c6d5b7f_phone1-p-800.png
+_zip_tmp/extracted/images/68bb319d2327f0531c6d5b7f_phone1.png
+_zip_tmp/extracted/images/68bbf5100853112c1181b5ca_788807342cfb6119775fc31ae4dc7660_youtube-black.svg
+_zip_tmp/extracted/images/68bbf510d7a2b59d4154649c_4e42136e1806a05ccfe833acf4b5caa3_reddit-black.svg
+_zip_tmp/extracted/images/68bc218cd8c4f0f2596f21eb_external-link.svg
+_zip_tmp/extracted/images/68be44048256e43b1e58084b_OpenGraph.png
+_zip_tmp/extracted/images/68be465a4f1402f28b599489_FAV.png
+_zip_tmp/extracted/images/68bf0eadb29fee35c002ae8c_forecast-home-p-1080.png
+_zip_tmp/extracted/images/68bf0eadb29fee35c002ae8c_forecast-home-p-1600.png
+_zip_tmp/extracted/images/68bf0eadb29fee35c002ae8c_forecast-home-p-2000.png
+_zip_tmp/extracted/images/68bf0eadb29fee35c002ae8c_forecast-home-p-500.png
+_zip_tmp/extracted/images/68bf0eadb29fee35c002ae8c_forecast-home-p-800.png
+_zip_tmp/extracted/images/68bf0eadb29fee35c002ae8c_forecast-home.png
+_zip_tmp/extracted/images/68bf62637b5f6813a3d48c56_portfolio-performance-p-500.png
+_zip_tmp/extracted/images/68bf62637b5f6813a3d48c56_portfolio-performance.png
+_zip_tmp/extracted/images/68bf64b1237dc852e9cbcdc0_upcoming-card-3-p-500.png
+_zip_tmp/extracted/images/68bf64b1237dc852e9cbcdc0_upcoming-card-3.png
+_zip_tmp/extracted/images/68bf6605b4df5f9a02f2489b_spend-this-month-p-500.png
+_zip_tmp/extracted/images/68bf6605b4df5f9a02f2489b_spend-this-month.png
+_zip_tmp/extracted/images/68c02b1aa2d9315689379726_budgetcard-p-500.png
+_zip_tmp/extracted/images/68c02b1aa2d9315689379726_budgetcard.png
+_zip_tmp/extracted/images/68da67a91d421250bd53d4f1_useorigin_icon_256.png
+_zip_tmp/extracted/images/69032b659769e0e46d6ec2a2_9e3f9a9e7b43dc4d94f1f4d6959bb2b3_bg-vector.png
+_zip_tmp/extracted/images/6982eb6ef0e2783201963a08_193ad63def554aa72acf90a20f16cb56_taxes-banner.webp
+_zip_tmp/extracted/images/6986f59ac56b62cc93feaab3_file-hero-gradient-bg.png
+_zip_tmp/extracted/index.html
+_zip_tmp/extracted/js/ScrollTrigger.min.js
+_zip_tmp/extracted/js/attributes.js
+_zip_tmp/extracted/js/gsap.min.js
+_zip_tmp/extracted/js/jquery-3.5.1.min.dc5e7f18c8.js
+_zip_tmp/extracted/js/pulse.min.js
+_zip_tmp/extracted/js/slick.min.js
+_zip_tmp/extracted/js/typed.min.js
+_zip_tmp/extracted/js/webflow.8d5d0058.9029c640306d7171.js
+_zip_tmp/extracted/js/webflow.schunk.36b8fb49256177c8.js
+_zip_tmp/extracted/js/webflow.schunk.8208d3e53b97e3c7.js
+_zip_tmp/extracted/js/webflow.schunk.996e0f90f4592884.js
+_zip_tmp/extracted/js/webfont.js
+_zip_tmp/extracted/media/68acbc076b672f730e0c77b9%2F68bb73e8d95f81619ab0f106_Clouds1-transcode.mp4
+_zip_tmp/extracted/media/68acbc076b672f730e0c77b9%2F68bb73e8d95f81619ab0f106_Clouds1-transcode.webm
+_zip_tmp/saveweb2zip-com-useorigin-com.zip
+components.json
+dev-server.log
+docs/dev-supabase.md
+docs/files-storage.md
+docs/lune-operations-modules.md
+docs/release-audit/CLEANUP_CLASSIFICATION.md
+docs/release-audit/FINAL_AUDIT_REPORT.md
+docs/release-audit/MISSING_OR_UNCERTAIN.md
+docs/release-audit/PROJECT_TREE.txt
+docs/release-audit/REPO_BASELINE_SUMMARY.md
+docs/release-audit/ROOT_FILES_REVIEW.md
+docs/release-audit/TRACKED_FILES.txt
+docs/release-audit/TRACKED_JUNK_CANDIDATES.md
+docs/release-audit/UNTRACKED_FILES.txt
+docs/sql/field_installation.sql
+eslint.config.mjs
+middleware.ts
+next-env.d.ts
+next.config.ts
+out.xlsx
+out2.xlsx
+package-lock.json
+package.json
+postcss.config.js
+postcss.config.mjs
+public/brand/apex-logo-mark-white.svg
+public/brand/apex-logo-mark.svg
+public/brand/lune-logo-mark-white.svg
+public/brand/lune-logo-mark.svg
+public/file.svg
+public/globe.svg
+public/login-assets/bg.svg
+public/login-assets/hero-bg.jpeg
+public/login-assets/icon-left.svg
+public/login-assets/icon-right.svg
+public/next.svg
+public/origin/fonts/68acbc6e9832d8edc91f625b_LyonDisplay-Light-Trial.otf
+public/origin/fonts/68acbc6ea208b728ef351d78_LyonDisplay-LightItalic-Trial.otf
+public/origin/fonts/68acbc6ef1b9c827b523f364_LyonDisplay-Regular-Trial.otf
+public/origin/fonts/68acbd085a174326256d7272_SuisseIntlTrial-Book.otf
+public/origin/fonts/68b750bb2b4d0ef73f0c40c1_SuisseIntl-Book.ttf
+public/origin/fonts/68b7510852b05cbbfafd6927_SuisseIntl-Light.otf
+public/origin/fonts/68b752a8b15bb9cb1fef23ba_LyonDisplay-LightItalic-App.ttf
+public/origin/fonts/68b752a965188e52d8ba5195_LyonDisplay-Light-App.ttf
+public/origin/fonts/68be902d5f740a290c36247a_SuisseIntl-Medium.ttf
+public/origin/fonts/68be902db354943c23cc820e_SuisseIntl-Bold.ttf
+public/origin/fonts/68be902df135e6113e47d3db_SuisseIntl-Regular.ttf
+public/origin/images/68acbf05f9c3214369b19570_ArrowRight.svg
+public/origin/images/68acc0dd9b190be3a4886ccb_up-arrow.svg
+public/origin/images/68acccfaa258c2a8cbe1b4e8_3_Card_-p-500.png
+public/origin/images/68acccfaa258c2a8cbe1b4e8_3_Card_-p-800.png
+public/origin/images/68acccfaa258c2a8cbe1b4e8_3_Card_.png
+public/origin/images/68acccfae513691732224781_5_Card_-p-500.png
+public/origin/images/68acccfae513691732224781_5_Card_-p-800.png
+public/origin/images/68acccfae513691732224781_5_Card_.png
+public/origin/images/68acd078571a5d311d25fee7_manage.svg
+public/origin/images/68acd2db507fa7c358f3bf43_Group 48100208-p-1080.png
+public/origin/images/68acd2db507fa7c358f3bf43_Group 48100208-p-1600.avif
+public/origin/images/68acd2db507fa7c358f3bf43_Group 48100208-p-500.avif
+public/origin/images/68acd2db507fa7c358f3bf43_Group 48100208-p-800.png
+public/origin/images/68acd2db507fa7c358f3bf43_Group 48100208.avif
+public/origin/images/68acd3d1459c4533e7d4649a_stars.svg
+public/origin/images/68acd5283e22423f13fa59a3_Frame 1171277263.png
+public/origin/images/68acd528532db4e79e21bd27_666b21044c70f1d6377cef513b8b46f8_Frame 1171277262.png
+public/origin/images/68acd528c25e85a31ee91cea_aea62ac5e3b1a484ce8af496bc9356fd_Frame 1171277260.png
+public/origin/images/68acd528eff05fd8f147b257_Frame 1171277261.png
+public/origin/images/68acd7a5e5cde3d99e192e5e_54389a561455c6d1a4fd45db9a022b82_certificate-img.svg
+public/origin/images/68acd7c24626801554c0de6c_Device 13PM.avif
+public/origin/images/68acd82646629c5e94323829_Group 48100209-p-1080.avif
+public/origin/images/68acd82646629c5e94323829_Group 48100209-p-500.avif
+public/origin/images/68acd82646629c5e94323829_Group 48100209-p-800.avif
+public/origin/images/68acd82646629c5e94323829_Group 48100209.avif
+public/origin/images/68acd9870cd6bd06f59452e5_Vector.svg
+public/origin/images/68acdab71a7e9076acceea95_Group 48099573.svg
+public/origin/images/68acdab77d5044272816ea2e_Group 48099572.svg
+public/origin/images/68acdab78f3adff17297216d_Group 48099302.svg
+public/origin/images/68acdab7ac689f715a5f7ab8_Group 48100210.svg
+public/origin/images/68acdab7b486ec00160c181f_Group 48100211.svg
+public/origin/images/68acdab7c041fa9d7c650843_Group 48099570.svg
+public/origin/images/68acdb766e599845a105d124_Group 48099246.svg
+public/origin/images/68ace085523f69f53bf899cf_logo.svg
+public/origin/images/68addfe5b5ebdbf6f5d59eaa_Union.svg
+public/origin/images/68ade4d51f31e1e9f347cf81_Frame 1171277095.jpg
+public/origin/images/68ade502cb28cdafcd93510c_Frame 1171277096.jpg
+public/origin/images/68ade51d592c71c8975df4b7_Frame 48100179.jpg
+public/origin/images/68af10558a04078593d8f7ce_Group 48100214.png
+public/origin/images/68b7555efe58911d1050d3e4_1b7239eb1b5f8e3b968aebdff411859a_6_Card_.svg
+public/origin/images/68bb319d2327f0531c6d5b7f_phone1-p-1080.png
+public/origin/images/68bb319d2327f0531c6d5b7f_phone1-p-1600.png
+public/origin/images/68bb319d2327f0531c6d5b7f_phone1-p-500.png
+public/origin/images/68bb319d2327f0531c6d5b7f_phone1-p-800.png
+public/origin/images/68bb319d2327f0531c6d5b7f_phone1.png
+public/origin/images/68bbf5100853112c1181b5ca_788807342cfb6119775fc31ae4dc7660_youtube-black.svg
+public/origin/images/68bbf510d7a2b59d4154649c_4e42136e1806a05ccfe833acf4b5caa3_reddit-black.svg
+public/origin/images/68bc218cd8c4f0f2596f21eb_external-link.svg
+public/origin/images/68be44048256e43b1e58084b_OpenGraph.png
+public/origin/images/68be465a4f1402f28b599489_FAV.png
+public/origin/images/68bf0eadb29fee35c002ae8c_forecast-home-p-1080.png
+public/origin/images/68bf0eadb29fee35c002ae8c_forecast-home-p-1600.png
+public/origin/images/68bf0eadb29fee35c002ae8c_forecast-home-p-2000.png
+public/origin/images/68bf0eadb29fee35c002ae8c_forecast-home-p-500.png
+public/origin/images/68bf0eadb29fee35c002ae8c_forecast-home-p-800.png
+public/origin/images/68bf0eadb29fee35c002ae8c_forecast-home.png
+public/origin/images/68bf62637b5f6813a3d48c56_portfolio-performance-p-500.png
+public/origin/images/68bf62637b5f6813a3d48c56_portfolio-performance.png
+public/origin/images/68bf64b1237dc852e9cbcdc0_upcoming-card-3-p-500.png
+public/origin/images/68bf64b1237dc852e9cbcdc0_upcoming-card-3.png
+public/origin/images/68bf6605b4df5f9a02f2489b_spend-this-month-p-500.png
+public/origin/images/68bf6605b4df5f9a02f2489b_spend-this-month.png
+public/origin/images/68c02b1aa2d9315689379726_budgetcard-p-500.png
+public/origin/images/68c02b1aa2d9315689379726_budgetcard.png
+public/origin/images/68da67a91d421250bd53d4f1_useorigin_icon_256.png
+public/origin/images/69032b659769e0e46d6ec2a2_9e3f9a9e7b43dc4d94f1f4d6959bb2b3_bg-vector.png
+public/origin/images/6982eb6ef0e2783201963a08_193ad63def554aa72acf90a20f16cb56_taxes-banner.webp
+public/origin/images/6986f59ac56b62cc93feaab3_file-hero-gradient-bg.png
+public/origin/media/68acbc076b672f730e0c77b9%2F68bb73e8d95f81619ab0f106_Clouds1-transcode.mp4
+public/origin/media/68acbc076b672f730e0c77b9%2F68bb73e8d95f81619ab0f106_Clouds1-transcode.webm
+public/origin/media/68acbc076b672f730e0c77b9/68bb73e8d95f81619ab0f106_Clouds1-transcode.mp4
+public/origin/media/68acbc076b672f730e0c77b9/68bb73e8d95f81619ab0f106_Clouds1-transcode.webm
+public/origin/media/clouds.mp4
+public/origin/media/clouds.webm
+public/project-backgrounds/dune.jpg
+public/project-backgrounds/meadow.jpg
+public/project-backgrounds/sand.jpg
+public/project-backgrounds/water.jpg
+public/scripts/import-origin-assets.mjs
+public/vercel.svg
+public/window.svg
+scripts/backfill-field-installation-january.mjs
+scripts/check-no-direct-upload.mjs
+scripts/extract-clouds.mjs
+scripts/fix-august-date-conflicts.mjs
+scripts/generate-tokens-css.mjs
+scripts/import-oct-nov-2025.mjs
+scripts/move-storage-prefix.mjs
+scripts/reimport-field-installation-all.mjs
+scripts/rename-attendance-storage-yymmdd.mjs
+scripts/rename-field-installation-storage-yymmdd.mjs
+scripts/repair-field-installation-legacy-dates.mjs
+scripts/run-attendance-sync.mjs
+src/app/(app)/ai-assistant/page.tsx
+src/app/(app)/ai/knowledge/page.tsx
+src/app/(app)/ai/page.tsx
+src/app/(app)/attendance/page.tsx
+src/app/(app)/cable-calculations/page.tsx
+src/app/(app)/control-tower/page.tsx
+src/app/(app)/daily-installation-reports/page.tsx
+src/app/(app)/daily-personal-reports/page.tsx
+src/app/(app)/dashboard/page.tsx
+src/app/(app)/documents/page.tsx
+src/app/(app)/evm-dashboard/page.tsx
+src/app/(app)/installations/page.tsx
+src/app/(app)/layout.tsx
+src/app/(app)/notifications/page.tsx
+src/app/(app)/personal/page.tsx
+src/app/(app)/procurement/page.tsx
+src/app/(app)/profile/page.tsx
+src/app/(app)/progress/page.tsx
+src/app/(app)/project-controls/page.tsx
+src/app/(app)/project-documents-follow-up/page.tsx
+src/app/(app)/projects/[projectId]/page.tsx
+src/app/(app)/projects/page.tsx
+src/app/(app)/reports/page.tsx
+src/app/(app)/schedule-comparison/page.tsx
+src/app/(app)/schedule-control/page.tsx
+src/app/(app)/schedule/page.tsx
+src/app/(app)/settings/page.tsx
+src/app/(app)/team/page.tsx
+src/app/(app)/templates/page.tsx
+src/app/(app)/warehouse/page.tsx
+src/app/(app)/weekly-evm/page.tsx
+src/app/api/ai/chat/route.ts
+src/app/api/ai/knowledge/ingest/route.ts
+src/app/api/ai/knowledge/route.ts
+src/app/api/ai/messages/route.ts
+src/app/api/ai/thread/route.ts
+src/app/api/ai/threads/route.ts
+src/app/api/attendance/available-files/route.ts
+src/app/api/attendance/dates/route.ts
+src/app/api/attendance/details/route.ts
+src/app/api/attendance/export-monthly-hours/route.ts
+src/app/api/attendance/export/route.ts
+src/app/api/attendance/import-from-storage/route.ts
+src/app/api/attendance/professions/route.ts
+src/app/api/attendance/summary/route.ts
+src/app/api/auth/change-password/route.ts
+src/app/api/auth/login/route.ts
+src/app/api/auth/logout/route.ts
+src/app/api/auth/me/route.ts
+src/app/api/cron/attendance-sync/route.ts
+src/app/api/cron/field-installation-sync/route.ts
+src/app/api/cron/sync-attendance/route.ts
+src/app/api/daily-personal-reports/available-files/route.ts
+src/app/api/daily-personal-reports/dates/route.ts
+src/app/api/daily-personal-reports/details/route.ts
+src/app/api/daily-personal-reports/export/route.ts
+src/app/api/daily-personal-reports/import-from-storage/route.ts
+src/app/api/daily-personal-reports/professions/route.ts
+src/app/api/daily-personal-reports/summary/route.ts
+src/app/api/field-installation/dates/route.ts
+src/app/api/field-installation/day/route.ts
+src/app/api/field-installation/export-day/route.ts
+src/app/api/field-installation/export/route.ts
+src/app/api/field-installation/file/route.ts
+src/app/api/field-installation/ingest/route.ts
+src/app/api/field-installation/me/route.ts
+src/app/api/field-installation/month/route.ts
+src/app/api/field-installation/range/route.ts
+src/app/api/field-installation/sync/route.ts
+src/app/api/field-reports/day/route.ts
+src/app/api/field-reports/export/route.ts
+src/app/api/field-reports/import/route.ts
+src/app/api/field-reports/month/route.ts
+src/app/api/field-reports/sync/route.ts
+src/app/api/files/process/route.ts
+src/app/api/installations/calendar/route.ts
+src/app/api/installations/day/route.ts
+src/app/api/installations/export-month/route.ts
+src/app/api/installations/sync/route.ts
+src/app/api/jobs/attendance-sync/route.ts
+src/app/api/jobs/daily-personal-reports-sync/route.ts
+src/app/api/jobs/field-installation-auto-ingest/route.ts
+src/app/api/jobs/import-attendance/route.ts
+src/app/api/jobs/import-daily-personal-reports/route.ts
+src/app/api/jobs/import-field-installation/route.ts
+src/app/api/jobs/sync-attendance-hourly/route.ts
+src/app/api/schedule/assemble/route.ts
+src/app/api/schedule/audit-log/route.ts
+src/app/api/schedule/compare/export/route.ts
+src/app/api/schedule/compare/route.ts
+src/app/api/schedule/import/route.ts
+src/app/api/schedule/revisions/route.ts
+src/app/api/transportation/day/route.ts
+src/app/api/transportation/export-month/route.ts
+src/app/api/transportation/me/route.ts
+src/app/api/transportation/month/route.ts
+src/app/api/transportation/report/route.ts
+src/app/api/weather/moscow/route.ts
+src/app/app/evm/page.tsx
+src/app/app/page.tsx
+src/app/app/reports/page.tsx
+src/app/app/schedule/page.tsx
+src/app/auth/change-password/page.tsx
+src/app/auth/force-password/page.tsx
+src/app/auth/forgot-password/page.tsx
+src/app/auth/login/page.tsx
+src/app/auth/request-access/page.tsx
+src/app/auth/reset-password/page.tsx
+src/app/favicon.ico
+src/app/globals.css
+src/app/icon.svg
+src/app/layout.tsx
+src/app/login/page.tsx
+src/app/logout/route.ts
+src/app/page.tsx
+src/app/tokens.generated.css
+src/components/ThemeToggle.tsx
+src/components/ai/ChatMessage.tsx
+src/components/ai/CitationPills.tsx
+src/components/ai/Citations.tsx
+src/components/ai/Composer.tsx
+src/components/ai/Markdown.tsx
+src/components/ai/ThreadList.tsx
+src/components/apex/blocks.tsx
+src/components/apex/charts.tsx
+src/components/apex/live-graphics.tsx
+src/components/attendance/AttendanceWorkspace.tsx
+src/components/field-installation/FieldInstallationCalendar.tsx
+src/components/field-reports/DailyInstallationReportsWorkspace.tsx
+src/components/installations/InstallationsWorkspace.tsx
+src/components/layout/AppShell.tsx
+src/components/layout/Sidebar.tsx
+src/components/layout/Topbar.tsx
+src/components/marketing/BackgroundVideo.tsx
+src/components/personal/TransportationWorkspace.tsx
+src/components/schedule/ScheduleControlWorkspace.tsx
+src/components/shared/StatusBadge.tsx
+src/components/ui/badge.tsx
+src/components/ui/button.tsx
+src/components/ui/card.tsx
+src/components/ui/dropdown-menu.tsx
+src/components/ui/input.tsx
+src/components/ui/separator.tsx
+src/components/ui/sheet.tsx
+src/components/ui/tabs.tsx
+src/components/ui/tooltip.tsx
+src/features/files/realtimeFiles.ts
+src/features/files/uploadFile.ts
+src/features/files/useFiles.ts
+src/features/files/useUploadFile.ts
+src/lib/__tests__/field-installation-utils.test.ts
+src/lib/ai/auth.ts
+src/lib/ai/citations.ts
+src/lib/ai/client-auth.ts
+src/lib/ai/client.ts
+src/lib/ai/constants.ts
+src/lib/ai/openai.ts
+src/lib/ai/route-auth.ts
+src/lib/apex-data.ts
+src/lib/apex-live-data.ts
+src/lib/apex-nav.ts
+src/lib/attendance-sync.ts
+src/lib/attendance/import.ts
+src/lib/attendance/monthly-hours.ts
+src/lib/cable-calculations-dashboard.ts
+src/lib/cn.ts
+src/lib/date-risk.ts
+src/lib/field-installation/import-job.ts
+src/lib/field-installation/ingest-runner.ts
+src/lib/field-installation/ingest.ts
+src/lib/field-installation/pipeline.ts
+src/lib/field-installation/utils.ts
+src/lib/field-reports/parse-installation-xlsx.ts
+src/lib/field-reports/service.ts
+src/lib/field-reports/storage-scan.ts
+src/lib/installations/discover.ts
+src/lib/installations/parser.ts
+src/lib/installations/queries.ts
+src/lib/project-controls-follow-up.ts
+src/lib/project-documents-follow-up.ts
+src/lib/project-documents-template.ts
+src/lib/schedule-control.ts
+src/lib/schedule/change-type.ts
+src/lib/schedule/compare.ts
+src/lib/supabase/admin.ts
+src/lib/supabase/browser.ts
+src/lib/supabase/client.ts
+src/lib/supabase/server.ts
+src/lib/transportation/common.ts
+src/lib/transportation/server.ts
+src/lib/utils.ts
+src/lib/warehouse-follow-up.ts
+src/middleware.ts
+src/types/database.types.ts
+src/types/path-aliases.d.ts
+supabase/migrations/20260224_ai_assistant.sql
+supabase/migrations/20260224_ai_messages_tokens_meta.sql
+supabase/migrations/20260224_ai_threads_messages_base.sql
+supabase/migrations/202602251300_installations.sql
+supabase/migrations/202602251430_installations_grants.sql
+supabase/migrations/202602251600_field_reports.sql
+supabase/migrations/202602251730_profiles_auth.sql
+supabase/migrations/20260225_transportation.sql
+supabase/migrations/202602261030_field_installation_files.sql
+supabase/migrations/202602261215_field_installation_daily_summary.sql
+supabase/migrations/202602261640_field_installation_rows_fk_fix.sql
+supabase/migrations/202602261900_field_installation_import_pipeline.sql
+supabase/migrations/202602261900_field_installation_ingestion_fix.sql
+supabase/migrations/202602261945_public_files.sql
+supabase/migrations/202602262010_transport_runs_file_ref.sql
+tailwind.config.js
+templates/A27-MonthlyHours-2026-02.xlsx
+tests/ci-smoke.test.mjs
+tmp/codex-write-test.txt
+tmp/dev.stderr.log
+tmp/dev.stdout.log
+tmp/login-design-reference-2.jpg
+tmp/login-design-reference.jpg
+tmp/monthly-template-supabase.xlsx
+tokens/tokens.json
+tsconfig.json
+vercel.json

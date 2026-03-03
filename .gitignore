@@ -1,8 +1,8 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# ============================================================================
+# Dependencies
+# ============================================================================
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -10,32 +10,109 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# ============================================================================
+# Build and runtime outputs
+# ============================================================================
+.next/
+out/
+build/
+dist/
+coverage/
+.nyc_output/
+dist-ssr/
+*.tsbuildinfo
+*.lcov
 
-# next.js
-/.next/
-/out/
+# ============================================================================
+# Environment and secrets (keep .env.example tracked)
+# ============================================================================
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.local.php
 
-# production
-/build
-
-# misc
-.DS_Store
+# Optional local secret material
 *.pem
+*.key
+*.cert
+*.p12
+*.pfx
+.aws-credentials
 
-# debug
+# ============================================================================
+# Logs
+# ============================================================================
+*.log
+dev-server.log
 npm-debug.log*
+npm-error.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+pnpm-error.log*
+lerna-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# ============================================================================
+# Temporary files and local work dirs
+# ============================================================================
+tmp/
+_zip_tmp/
+_tmp_*/
+*.swp
+*.swo
+*~
+*.tmp
+*.temp
 
-# vercel
-.vercel
+# Root-level ad hoc exports/reports
+/out.xlsx
+/out2.xlsx
+/report-*.xlsx
+/export-*.xlsx
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# ============================================================================
+# OS junk
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ============================================================================
+# Editor and IDE files
+# ============================================================================
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+*.c9/
+*.iml
+*.iws
+*.ipr
+
+# ============================================================================
+# Deployment and tooling cache
+# ============================================================================
+.vercel/
+.turbo/
+.cache/
+
+# ============================================================================
+# Archive and backup folders
+# ============================================================================
+_archive/
+archive/
+*.old
+*.bak
+*.backup
+*-backup/
+*_backup/
+backup-*
+*.orig
+final-final*
