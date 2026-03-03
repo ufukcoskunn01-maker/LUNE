@@ -459,13 +459,13 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="mt-10">
+          <div className="mt-10 flex justify-center">
             <Image
               src="/origin/images/68bb319d2327f0531c6d5b7f_phone1.png"
               alt="Phone app preview"
               width={1920}
               height={1080}
-              className="h-auto w-full"
+              className="h-auto w-full max-w-[1200px] lg:max-w-[1000px] xl:max-w-[920px]"
             />
           </div>
         </div>

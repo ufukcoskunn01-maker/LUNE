@@ -2,15 +2,15 @@ import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";
 import { DAILY_MESSAGE_LIMIT, KNOWLEDGE_MATCH_COUNT } from "@/lib/ai/constants";
 import { extractCitationIds, toPgVectorLiteral } from "@/lib/ai/citations";
-import { requireAuthenticatedUser } from "@/lib/ai/auth";
 import { createEmbedding, generateAssistantAnswer } from "@/lib/ai/openai";
+import { requireRouteUser, type RouteSupabaseClient } from "@/lib/ai/route-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ChatBodySchema = z.object({
   projectCode: z.string().trim().min(1).max(64),
-  threadId: z.string().uuid().optional(),
+  threadId: z.string().optional(),
   message: z.string().trim().min(1).max(12000),
 });
 
@@ -20,6 +20,13 @@ const SYSTEM_PROMPT = [
   "Output in structured bullets.",
   "Always cite knowledge IDs you used at the end: [K:uuid,...]",
 ].join(" ");
+
+function isUuid(v: unknown) {
+  return (
+    typeof v === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
+  );
+}
 
 function buildKnowledgeContext(
   rows: Array<{ id: string; title: string; content: string; similarity: number | null }>
@@ -45,9 +52,139 @@ function pickCitations(
     .map((row) => ({ id: row.id, title: row.title }));
 }
 
+async function incrementUsageSafe(args: {
+  supabase: RouteSupabaseClient;
+  userId: string;
+  day: string;
+  messageInc: number;
+  tokenInc: number;
+  messageLimit: number;
+}) {
+  const rpcResult = await args.supabase.rpc("increment_ai_usage", {
+    p_user_id: args.userId,
+    p_day: args.day,
+    p_message_inc: args.messageInc,
+    p_token_inc: args.tokenInc,
+    p_message_limit: args.messageLimit,
+  });
+
+  if (!rpcResult.error) {
+    const row = Array.isArray(rpcResult.data) ? rpcResult.data[0] : rpcResult.data;
+    return {
+      ok: true as const,
+      allowed: Boolean(row?.allowed),
+      messages_count: Number(row?.messages_count || 0),
+      tokens_count: Number(row?.tokens_count || 0),
+    };
+  }
+
+  const isMissingFn =
+    rpcResult.error.message.includes("Could not find the function public.increment_ai_usage") ||
+    rpcResult.error.message.includes("function public.increment_ai_usage");
+
+  if (!isMissingFn) {
+    return { ok: false as const, error: rpcResult.error.message };
+  }
+
+  const isMissingUsageTableError = (message: string) =>
+    message.includes("Could not find the table 'public.ai_usage_daily'") || message.includes("relation \"ai_usage_daily\" does not exist");
+
+  const dayStart = `${args.day}T00:00:00.000Z`;
+  const dayEndDate = new Date(`${args.day}T00:00:00.000Z`);
+  dayEndDate.setUTCDate(dayEndDate.getUTCDate() + 1);
+  const dayEnd = dayEndDate.toISOString();
+
+  const { data: existing, error: existingError } = await args.supabase
+    .from("ai_usage_daily")
+    .select("messages_count,tokens_count")
+    .eq("user_id", args.userId)
+    .eq("day", args.day)
+    .maybeSingle();
+
+  if (existingError) {
+    if (isMissingUsageTableError(existingError.message)) {
+      const { count, error: countError } = await args.supabase
+        .from("ai_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", args.userId)
+        .eq("role", "user")
+        .gte("created_at", dayStart)
+        .lt("created_at", dayEnd);
+
+      if (countError) {
+        return { ok: false as const, error: countError.message };
+      }
+
+      const currentMessages = Number(count || 0);
+      const nextMessages = currentMessages + Math.max(args.messageInc, 0);
+      if (nextMessages > args.messageLimit) {
+        return {
+          ok: true as const,
+          allowed: false,
+          messages_count: currentMessages,
+          tokens_count: 0,
+        };
+      }
+
+      return {
+        ok: true as const,
+        allowed: true,
+        messages_count: nextMessages,
+        tokens_count: 0,
+      };
+    }
+
+    return { ok: false as const, error: existingError.message };
+  }
+
+  const currentMessages = Number(existing?.messages_count || 0);
+  const currentTokens = Number(existing?.tokens_count || 0);
+  const nextMessages = currentMessages + Math.max(args.messageInc, 0);
+  const nextTokens = currentTokens + Math.max(args.tokenInc, 0);
+
+  if (nextMessages > args.messageLimit) {
+    return {
+      ok: true as const,
+      allowed: false,
+      messages_count: currentMessages,
+      tokens_count: currentTokens,
+    };
+  }
+
+  const { error: upsertError } = await args.supabase.from("ai_usage_daily").upsert(
+    {
+      user_id: args.userId,
+      day: args.day,
+      messages_count: nextMessages,
+      tokens_count: nextTokens,
+    },
+    { onConflict: "user_id,day" }
+  );
+
+  if (upsertError) {
+    if (isMissingUsageTableError(upsertError.message)) {
+      return {
+        ok: true as const,
+        allowed: true,
+        messages_count: nextMessages,
+        tokens_count: nextTokens,
+      };
+    }
+
+    return { ok: false as const, error: upsertError.message };
+  }
+
+  return {
+    ok: true as const,
+    allowed: true,
+    messages_count: nextMessages,
+    tokens_count: nextTokens,
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuthenticatedUser(request);
+    const auth = await requireRouteUser(request);
     if (!auth.ok) {
       return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
     }
@@ -57,34 +194,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: parsed.error.issues[0]?.message || "Invalid input." }, { status: 400 });
     }
 
-    const { projectCode, threadId, message } = parsed.data;
+    const { projectCode, message } = parsed.data;
+    const rawThreadId = parsed.data.threadId;
+    const threadId = isUuid(rawThreadId) ? rawThreadId : null;
 
-    const usageGate = await auth.userClient.rpc("increment_ai_usage", {
-      p_user_id: auth.user.id,
-      p_day: new Date().toISOString().slice(0, 10),
-      p_message_inc: 1,
-      p_token_inc: 0,
-      p_message_limit: DAILY_MESSAGE_LIMIT,
+    const usageDay = new Date().toISOString().slice(0, 10);
+    const usageGate = await incrementUsageSafe({
+      supabase: auth.supabase,
+      userId: auth.user.id,
+      day: usageDay,
+      messageInc: 1,
+      tokenInc: 0,
+      messageLimit: DAILY_MESSAGE_LIMIT,
     });
 
-    if (usageGate.error) {
-      return NextResponse.json({ ok: false, error: usageGate.error.message }, { status: 500 });
+    if (!usageGate.ok) {
+      return NextResponse.json({ ok: false, error: usageGate.error }, { status: 500 });
     }
 
-    const usage = Array.isArray(usageGate.data) ? usageGate.data[0] : usageGate.data;
-    if (!usage?.allowed) {
+    if (!usageGate.allowed) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: `Daily message limit reached (${DAILY_MESSAGE_LIMIT}/day).`,
-        },
+        { ok: false, error: `Daily message limit reached (${DAILY_MESSAGE_LIMIT}/day).` },
         { status: 429 }
       );
     }
 
     let resolvedThreadId = threadId;
     if (resolvedThreadId) {
-      const { data: existingThread, error: existingThreadError } = await auth.userClient
+      const { data: existingThread, error: existingThreadError } = await auth.supabase
         .from("ai_threads")
         .select("id")
         .eq("id", resolvedThreadId)
@@ -101,13 +238,9 @@ export async function POST(request: NextRequest) {
       }
     } else {
       const title = message.length > 80 ? `${message.slice(0, 77)}...` : message;
-      const { data: createdThread, error: threadCreateError } = await auth.userClient
+      const { data: createdThread, error: threadCreateError } = await auth.supabase
         .from("ai_threads")
-        .insert({
-          user_id: auth.user.id,
-          project_code: projectCode,
-          title,
-        })
+        .insert({ user_id: auth.user.id, project_code: projectCode, title })
         .select("id")
         .single();
 
@@ -115,10 +248,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: false, error: threadCreateError?.message || "Failed to create thread." }, { status: 500 });
       }
 
-      resolvedThreadId = createdThread.id;
+      resolvedThreadId = String((createdThread as { id?: string } | null)?.id || "");
+      if (!resolvedThreadId) {
+        return NextResponse.json({ ok: false, error: "Failed to create thread." }, { status: 500 });
+      }
     }
 
-    const { error: userMessageError } = await auth.userClient.from("ai_messages").insert({
+    const { error: userMessageError } = await auth.supabase.from("ai_messages").insert({
       thread_id: resolvedThreadId,
       user_id: auth.user.id,
       role: "user",
@@ -130,10 +266,8 @@ export async function POST(request: NextRequest) {
     }
 
     const queryEmbedding = await createEmbedding(message);
-    const vectorLiteral = toPgVectorLiteral(queryEmbedding);
-
-    const knowledgeResult = await auth.userClient.rpc("match_ai_knowledge", {
-      query_embedding: vectorLiteral,
+    const knowledgeResult = await auth.supabase.rpc("match_ai_knowledge", {
+      query_embedding: toPgVectorLiteral(queryEmbedding),
       project_code: projectCode,
       match_count: KNOWLEDGE_MATCH_COUNT,
     });
@@ -149,38 +283,48 @@ export async function POST(request: NextRequest) {
       similarity: number | null;
     }>;
 
-    const knowledgeContext = buildKnowledgeContext(knowledgeRows);
-
     const completion = await generateAssistantAnswer({
       systemPrompt: SYSTEM_PROMPT,
       userMessage: message,
-      knowledgeContext,
+      knowledgeContext: buildKnowledgeContext(knowledgeRows),
     });
 
     const citations = pickCitations(completion.answer, knowledgeRows);
 
-    const { error: assistantInsertError } = await auth.userClient.from("ai_messages").insert({
+    let assistantInsert = await auth.supabase.from("ai_messages").insert({
       thread_id: resolvedThreadId,
       user_id: auth.user.id,
       role: "assistant",
       content: completion.answer,
       tokens: completion.tokens,
-      meta: {
-        citations,
-      },
+      meta: { citations },
     });
 
-    if (assistantInsertError) {
-      return NextResponse.json({ ok: false, error: assistantInsertError.message }, { status: 500 });
+    if (
+      assistantInsert.error &&
+      (assistantInsert.error.message.includes("column ai_messages.tokens does not exist") ||
+        assistantInsert.error.message.includes("column ai_messages.meta does not exist"))
+    ) {
+      assistantInsert = await auth.supabase.from("ai_messages").insert({
+        thread_id: resolvedThreadId,
+        user_id: auth.user.id,
+        role: "assistant",
+        content: completion.answer,
+      });
+    }
+
+    if (assistantInsert.error) {
+      return NextResponse.json({ ok: false, error: assistantInsert.error.message }, { status: 500 });
     }
 
     if (completion.tokens && completion.tokens > 0) {
-      await auth.userClient.rpc("increment_ai_usage", {
-        p_user_id: auth.user.id,
-        p_day: new Date().toISOString().slice(0, 10),
-        p_message_inc: 0,
-        p_token_inc: completion.tokens,
-        p_message_limit: DAILY_MESSAGE_LIMIT,
+      await incrementUsageSafe({
+        supabase: auth.supabase,
+        userId: auth.user.id,
+        day: usageDay,
+        messageInc: 0,
+        tokenInc: completion.tokens,
+        messageLimit: DAILY_MESSAGE_LIMIT,
       });
     }
 

@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminUser } from "@/lib/ai/auth";
 import { createEmbedding } from "@/lib/ai/openai";
 import { toPgVectorLiteral } from "@/lib/ai/citations";
+import { requireRouteUser } from "@/lib/ai/route-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,9 +17,17 @@ const IngestBodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdminUser(request);
+    const auth = await requireRouteUser(request);
     if (!auth.ok) {
       return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+    }
+
+    const { data: isAdmin, error: adminError } = await auth.supabase.rpc("is_ai_admin", { user_uuid: auth.user.id });
+    if (adminError) {
+      return NextResponse.json({ ok: false, error: adminError.message }, { status: 500 });
+    }
+    if (!isAdmin) {
+      return NextResponse.json({ ok: false, error: "Admin access required." }, { status: 403 });
     }
 
     const parsed = IngestBodySchema.safeParse(await request.json());
@@ -49,7 +57,7 @@ export async function POST(request: NextRequest) {
       upsertPayload.id = payload.id;
     }
 
-    const { data, error } = await auth.adminClient
+    const { data, error } = await auth.supabase
       .from("ai_knowledge")
       .upsert(upsertPayload, { onConflict: "id" })
       .select("id,title,updated_at")

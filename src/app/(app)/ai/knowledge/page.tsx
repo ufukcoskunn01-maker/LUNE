@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { getAccessToken } from "@/lib/ai/client-auth";
 
 const PROJECT_OPTIONS = ["A27", "A25", "A24", "A23", "A22"];
 
@@ -17,14 +16,15 @@ type KnowledgeRow = {
   updated_at: string;
 };
 
-async function apiCall<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+async function apiCall<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(init?.headers || {}),
+  };
+
   const res = await fetch(path, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers || {}),
-    },
+    headers,
     cache: "no-store",
   });
 
@@ -37,7 +37,6 @@ async function apiCall<T>(path: string, token: string, init?: RequestInit): Prom
 }
 
 export default function AIKnowledgePage() {
-  const [token, setToken] = useState<string | null>(null);
   const [projectCode, setProjectCode] = useState("A27");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -48,17 +47,12 @@ export default function AIKnowledgePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getAccessToken().then((nextToken) => setToken(nextToken));
-  }, []);
-
   const loadRows = useCallback(async () => {
-    if (!token) return;
     setLoading(true);
     setError(null);
 
     try {
-      const data = await apiCall<KnowledgeRow[]>(`/api/ai/knowledge?projectCode=${encodeURIComponent(projectCode)}`, token);
+      const data = await apiCall<KnowledgeRow[]>(`/api/ai/knowledge?projectCode=${encodeURIComponent(projectCode)}`);
       setRows(data);
       setIsAdmin(true);
     } catch (err) {
@@ -67,7 +61,7 @@ export default function AIKnowledgePage() {
     } finally {
       setLoading(false);
     }
-  }, [token, projectCode]);
+  }, [projectCode]);
 
   useEffect(() => {
     loadRows();
@@ -75,16 +69,12 @@ export default function AIKnowledgePage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!token) {
-      setError("Admin authentication is required.");
-      return;
-    }
 
     setSaving(true);
     setError(null);
 
     try {
-      await apiCall("/api/ai/knowledge/ingest", token, {
+      await apiCall("/api/ai/knowledge/ingest", {
         method: "POST",
         body: JSON.stringify({
           projectCode,
@@ -197,11 +187,6 @@ export default function AIKnowledgePage() {
           </div>
 
           {error ? <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</div> : null}
-          {!token ? (
-            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-sm text-amber-800">
-              Sign in as an admin to manage knowledge.
-            </div>
-          ) : null}
         </CardContent>
       </Card>
     </div>

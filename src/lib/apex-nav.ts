@@ -4,6 +4,7 @@ import {
   Boxes,
   CalendarClock,
   ClipboardList,
+  Construction,
   FileText,
   FolderKanban,
   Gauge,
@@ -50,6 +51,13 @@ export const APEX_PRIMARY_NAV: NavItem[] = [
     description: "Portfolio controls with budget, schedule, and risk status.",
   },
   {
+    href: "/project-controls",
+    label: "Project Controls",
+    shortLabel: "Controls",
+    icon: Gauge,
+    description: "Cross-module package follow-up for SPI/CPI, readiness, and blockers.",
+  },
+  {
     href: "/evm-dashboard",
     label: "EVM Dashboard",
     shortLabel: "EVM",
@@ -71,6 +79,13 @@ export const APEX_PRIMARY_NAV: NavItem[] = [
     description: "Daily personnel report controls with profession and company breakdown.",
   },
   {
+    href: "/daily-installation-reports",
+    label: "Daily Installation Reports",
+    shortLabel: "Installation",
+    icon: Construction,
+    description: "Field report sync/import with calendar status, parsing health, and day drilldown.",
+  },
+  {
     href: "/progress",
     label: "Progress Tracking",
     shortLabel: "Progress",
@@ -86,10 +101,17 @@ export const APEX_PRIMARY_NAV: NavItem[] = [
   },
   {
     href: "/warehouse",
-    label: "Warehouse",
+    label: "Warehouse Follow-Up",
     shortLabel: "Warehouse",
     icon: Warehouse,
-    description: "Inventory valuation, stock risk, and material transactions.",
+    description: "1C-ready material follow-up with stock, shortages, and package readiness.",
+  },
+  {
+    href: "/cable-calculations",
+    label: "Cable Calculations",
+    shortLabel: "Cables",
+    icon: Construction,
+    description: "Feeder sizing, ampacity checks, and voltage-drop risk visibility.",
   },
   {
     href: "/reports",
@@ -99,11 +121,11 @@ export const APEX_PRIMARY_NAV: NavItem[] = [
     description: "Automated report scheduling, generation, and distribution.",
   },
   {
-    href: "/documents",
-    label: "Documents",
-    shortLabel: "Documents",
+    href: "/project-documents-follow-up",
+    label: "Project Documents Follow-Up",
+    shortLabel: "Doc Follow-Up",
     icon: ClipboardList,
-    description: "Version-controlled records, RFIs, submittals, and drawings.",
+    description: "Pilot-BIM document approval follow-up with risk, revisions, and package readiness.",
   },
   {
     href: "/ai",

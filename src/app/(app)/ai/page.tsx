@@ -1,257 +1,299 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useEffect, useRef, useState } from "react";
+import { Plus } from "lucide-react";
 import { ChatMessage } from "@/components/ai/ChatMessage";
-import { ThreadList } from "@/components/ai/ThreadList";
-import { getAccessToken } from "@/lib/ai/client-auth";
+import { Composer } from "@/components/ai/Composer";
+import { BackgroundVideo } from "@/components/marketing/BackgroundVideo";
+import type { AIMessage, Citation } from "@/lib/ai/client";
+import { createThread, sendChat } from "@/lib/ai/client";
 
-const PROJECT_STORAGE_KEY = "lune:selected-project";
 const PROJECT_OPTIONS = ["A27", "A25", "A24", "A23", "A22"];
 
-type ThreadItem = {
-  id: string;
-  title: string | null;
-  project_code: string;
-  created_at: string;
+const STORAGE_KEYS = {
+  project: "lune:ai:project",
+  draftByProject: "lune:ai:draftByProject",
 };
 
-type Citation = {
-  id: string;
-  title: string;
-};
-
-type MessageItem = {
-  id: string;
+function newLocalMessage(args: {
   role: "user" | "assistant" | "system";
   content: string;
-  created_at: string;
-  meta?: {
-    citations?: Citation[];
-  } | null;
-};
-
-async function apiCall<T>(path: string, token: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(init?.headers || {}),
-    },
-    cache: "no-store",
-  });
-
-  const json = await res.json();
-  if (!res.ok || !json.ok) {
-    throw new Error(json.error || `Request failed (${res.status})`);
-  }
-
-  return json.data as T;
+  citations?: Citation[];
+  isError?: boolean;
+}) {
+  return {
+    id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    role: args.role,
+    content: args.content,
+    created_at: new Date().toISOString(),
+    meta: { citations: args.citations || [] },
+    __localError: args.isError || false,
+  } as AIMessage & { __localError?: boolean };
 }
 
 export default function AIPage() {
-  const searchParams = useSearchParams();
-  const [token, setToken] = useState<string | null>(null);
-  const [projectCode, setProjectCode] = useState("A27");
-  const [threads, setThreads] = useState<ThreadItem[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<MessageItem[]>([]);
-  const [input, setInput] = useState((searchParams.get("question") || "").trim());
-  const [loadingThreads, setLoadingThreads] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [selectedProjectCode, setSelectedProjectCode] = useState("A27");
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Array<AIMessage & { __localError?: boolean }>>([]);
+  const [inputText, setInputText] = useState("");
+
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [streaming, setStreaming] = useState(false);
+
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [authMissing, setAuthMissing] = useState(false);
+
+  const [online, setOnline] = useState(true);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const shouldStickToBottomRef = useRef(true);
+  const lastFailedPayloadRef = useRef<{ message: string } | null>(null);
 
   useEffect(() => {
-    getAccessToken().then((nextToken) => setToken(nextToken));
+    setOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
 
-    const storedProject = typeof window !== "undefined" ? window.localStorage.getItem(PROJECT_STORAGE_KEY) : null;
-    if (storedProject) {
-      setProjectCode(storedProject.split(" ").at(-1) || "A27");
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+
+    const savedProject = window.localStorage.getItem(STORAGE_KEYS.project);
+    if (savedProject && PROJECT_OPTIONS.includes(savedProject)) {
+      setSelectedProjectCode(savedProject);
     }
 
-    const onProjectChange = (event: Event) => {
-      const detail = (event as CustomEvent<{ projectCode?: string }>).detail;
-      if (detail?.projectCode) {
-        setProjectCode(detail.projectCode);
-      }
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
     };
-
-    window.addEventListener("lune:project-change", onProjectChange as EventListener);
-    return () => window.removeEventListener("lune:project-change", onProjectChange as EventListener);
   }, []);
 
-  const loadThreads = useCallback(async () => {
-    if (!token) return;
-    setLoadingThreads(true);
-    setError(null);
+  function isAuthErrorMessage(message: string) {
+    return message.toLowerCase().includes("not authenticated") || message.toLowerCase().includes("no session");
+  }
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.project, selectedProjectCode);
+  }, [selectedProjectCode]);
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.draftByProject);
+    if (!raw) {
+      setInputText("");
+      return;
+    }
 
     try {
-      const data = await apiCall<ThreadItem[]>(`/api/ai/threads?projectCode=${encodeURIComponent(projectCode)}`, token);
-      setThreads(data);
-
-      if (data.length === 0) {
-        setActiveThreadId(null);
-        setMessages([]);
-      } else if (!activeThreadId || !data.find((item) => item.id === activeThreadId)) {
-        setActiveThreadId(data[0].id);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load threads.");
-    } finally {
-      setLoadingThreads(false);
+      const parsed = JSON.parse(raw) as Record<string, string>;
+      setInputText(parsed[selectedProjectCode] || "");
+    } catch {
+      setInputText("");
     }
-  }, [token, projectCode, activeThreadId]);
-
-  const loadMessages = useCallback(
-    async (threadId: string) => {
-      if (!token) return;
-      setLoadingMessages(true);
-      setError(null);
-
-      try {
-        const data = await apiCall<MessageItem[]>(`/api/ai/messages?threadId=${encodeURIComponent(threadId)}`, token);
-        setMessages(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load messages.");
-      } finally {
-        setLoadingMessages(false);
-      }
-    },
-    [token]
-  );
+  }, [selectedProjectCode]);
 
   useEffect(() => {
-    loadThreads();
-  }, [loadThreads]);
+    const raw = window.localStorage.getItem(STORAGE_KEYS.draftByProject);
+    const parsed = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    parsed[selectedProjectCode] = inputText;
+    window.localStorage.setItem(STORAGE_KEYS.draftByProject, JSON.stringify(parsed));
+  }, [inputText, selectedProjectCode]);
 
   useEffect(() => {
-    if (!activeThreadId) {
-      setMessages([]);
-      return;
-    }
-    loadMessages(activeThreadId);
-  }, [activeThreadId, loadMessages]);
+    // Fresh session per project: do not show previously saved conversations.
+    setSelectedThreadId(null);
+    setMessages([]);
+    setSendError(null);
+  }, [selectedProjectCode]);
 
-  const canSend = useMemo(() => !!token && !!input.trim() && !sending, [token, input, sending]);
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
 
-  async function onSend() {
-    if (!token) {
-      setError("You must be authenticated to use AI assistant.");
-      return;
-    }
+    if (!shouldStickToBottomRef.current) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+  }, [messages, streaming]);
 
-    const message = input.trim();
-    if (!message) return;
+  function handleScroll() {
+    const container = scrollRef.current;
+    if (!container) return;
 
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    shouldStickToBottomRef.current = distanceFromBottom < 80;
+  }
+
+  async function handleSend(overrideMessage?: string) {
+    const message = (overrideMessage ?? inputText).trim();
+    if (!message || sending || authMissing) return;
+
+    setSendError(null);
     setSending(true);
-    setError(null);
+    setStreaming(true);
+
+    let resolvedThreadId = selectedThreadId;
 
     try {
-      const data = await apiCall<{ threadId: string }>("/api/ai/chat", token, {
-        method: "POST",
-        body: JSON.stringify({
-          projectCode,
-          threadId: activeThreadId || undefined,
-          message,
-        }),
+      if (!resolvedThreadId) {
+        resolvedThreadId = await createThread(selectedProjectCode, message.slice(0, 80) || "New thread");
+        setSelectedThreadId(resolvedThreadId);
+      }
+
+      const optimisticUser = newLocalMessage({ role: "user", content: message });
+      const optimisticAssistant = newLocalMessage({ role: "assistant", content: "" });
+
+      setMessages((prev) => [...prev.filter((row) => !row.__localError), optimisticUser, optimisticAssistant]);
+      setInputText("");
+
+      lastFailedPayloadRef.current = { message };
+
+      const result = await sendChat({
+        projectCode: selectedProjectCode,
+        threadId: resolvedThreadId,
+        message,
+        onToken: (chunk) => {
+          setMessages((prev) => {
+            const next = [...prev];
+            const index = next.findIndex((row) => row.id === optimisticAssistant.id);
+            if (index === -1) return prev;
+            const existing = next[index];
+            next[index] = { ...existing, content: `${existing.content || ""}${chunk}` };
+            return next;
+          });
+        },
       });
 
-      setInput("");
+      setMessages((prev) => {
+        const next = [...prev];
+        const index = next.findIndex((row) => row.id === optimisticAssistant.id);
+        if (index === -1) return prev;
+        next[index] = {
+          ...next[index],
+          content: result.answer,
+          meta: { citations: result.citations || [] },
+        };
+        return next;
+      });
 
-      if (data.threadId !== activeThreadId) {
-        setActiveThreadId(data.threadId);
+      if (result.threadId && result.threadId !== selectedThreadId) {
+        setSelectedThreadId(result.threadId);
       }
 
-      await loadThreads();
-      await loadMessages(data.threadId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send message.");
+      setAuthMissing(false);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "AI request failed.";
+      setSendError(errorMessage);
+      if (isAuthErrorMessage(errorMessage)) {
+        setAuthMissing(true);
+      }
+
+      setMessages((prev) => {
+        const trimmed = prev.filter((row) => row.role !== "assistant" || row.content !== "");
+        const errorBubble = newLocalMessage({ role: "system", content: errorMessage, isError: true });
+        return [...trimmed, errorBubble];
+      });
     } finally {
       setSending(false);
+      setStreaming(false);
     }
   }
 
+  async function handleRetryLast() {
+    if (!lastFailedPayloadRef.current) return;
+    await handleSend(lastFailedPayloadRef.current.message);
+  }
+
+  function handleNewThread() {
+    setSelectedThreadId(null);
+    setMessages([]);
+    setSendError(null);
+  }
+
+  const sendDisabled = authMissing || !online || sending;
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-      <Card className="py-0">
-        <CardHeader className="border-b py-4">
-          <CardTitle>Threads</CardTitle>
-          <CardDescription>Project-specific AI conversation history.</CardDescription>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            Project
-            <select
-              value={projectCode}
-              onChange={(event) => setProjectCode(event.target.value)}
-              className="rounded-md border bg-background px-2 py-1 text-sm text-foreground"
-            >
-              {PROJECT_OPTIONS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-        </CardHeader>
-        <CardContent className="max-h-[70vh] overflow-auto p-4">
-          {loadingThreads ? <div className="text-sm text-muted-foreground">Loading threads...</div> : null}
-          <ThreadList items={threads} activeThreadId={activeThreadId} onSelect={setActiveThreadId} />
-        </CardContent>
-      </Card>
-
-      <Card className="py-0">
-        <CardHeader className="border-b py-4">
-          <CardTitle>LUNE AI Assistant</CardTitle>
-          <CardDescription>
-            Uses project knowledge context with citations. Daily limit: 200 messages per user.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4">
-          <div className="max-h-[58vh] space-y-3 overflow-auto rounded-xl border bg-muted/20 p-3">
-            {loadingMessages ? <div className="text-sm text-muted-foreground">Loading messages...</div> : null}
-            {!loadingMessages && messages.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Start by sending your first project question.</div>
-            ) : null}
-            {messages.map((item) => (
-              <ChatMessage
-                key={item.id}
-                role={item.role}
-                content={item.content}
-                createdAt={item.created_at}
-                citations={item.meta?.citations}
-              />
-            ))}
+    <main className="min-h-screen overflow-hidden bg-[#0f1011] text-zinc-100" style={{ fontFamily: '"SuisseIntl", Arial, sans-serif' }}>
+      <BackgroundVideo
+        mp4Src="/origin/media/68acbc076b672f730e0c77b9/68bb73e8d95f81619ab0f106_Clouds1-transcode.mp4"
+        webmSrc="/origin/media/68acbc076b672f730e0c77b9/68bb73e8d95f81619ab0f106_Clouds1-transcode.webm"
+        toneOverlayClassName="bg-transparent"
+        fadeOverlayClassName="bg-[linear-gradient(180deg,rgba(15,16,17,0)_0%,rgba(15,16,17,0.45)_72%,rgba(15,16,17,0.88)_100%)]"
+        className="relative min-h-screen"
+      >
+        <section className="mx-auto flex min-h-screen w-full max-w-[1200px] flex-col items-center px-4 pb-[50px] pt-[180px] text-center">
+          <div className="rounded-xl border border-[#d6ebff]/45 bg-[#d9f0ff]/95 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[#1f6e96]">
+            AI Workspace
           </div>
 
-          <div className="flex gap-2">
-            <Input
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="Ask about schedule, cost, risk, or controls insights..."
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  if (canSend) onSend();
-                }
-              }}
-            />
-            <Button type="button" onClick={onSend} disabled={!canSend} className="min-w-[90px]">
-              {sending ? "Sending..." : "Send"}
-            </Button>
+          <h1
+            className="mb-6 mt-6 text-[clamp(64px,8vw,96px)] font-light leading-[0.9] text-white"
+            style={{ fontFamily: '"LyonDisplay App", Georgia, "Times New Roman", serif' }}
+          >
+            <span className="italic">Ask</span> your project.
+          </h1>
+
+          <div className="mb-6 max-w-[520px]">
+            <p className="text-[16px] font-semibold leading-[1.35] text-white">LUNE AI Assistant</p>
+            <p className="text-[16px] font-light leading-[1.35] text-white/82">
+              Analyze schedule, progress, cost, and execution signals instantly.
+            </p>
           </div>
 
-          {error ? <div className="rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</div> : null}
-          {!token ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-sm text-amber-800">
-              No authenticated Supabase session found. Sign in to use AI routes.
+          {authMissing ? (
+            <div className="mb-4 w-full max-w-[590px] rounded-xl border border-amber-300/80 bg-amber-50/95 p-3 text-sm text-amber-900">
+              Supabase session not found. AI messaging is disabled until you sign in.
             </div>
           ) : null}
-        </CardContent>
-      </Card>
-    </div>
+
+          {messages.length > 0 ? (
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="mb-5 max-h-[38vh] w-full max-w-[920px] space-y-3 overflow-auto rounded-[24px] border border-white/15 bg-white/[0.08] p-3 backdrop-blur-xl scrollbar-thin sm:p-4"
+            >
+              {messages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  id={message.id}
+                  role={message.role}
+                  content={message.content || (streaming && message.role === "assistant" ? "" : " ")}
+                  createdAt={message.created_at}
+                  citations={message.meta?.citations || []}
+                  isStreaming={streaming && message.role === "assistant" && message.id.startsWith("local-")}
+                  isError={Boolean(message.__localError)}
+                  onRetry={message.__localError ? handleRetryLast : undefined}
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {sendError ? <p className="mb-3 text-xs text-red-100">Send failed: {sendError}</p> : null}
+
+          <div className="w-full max-w-[590px]">
+            <Composer value={inputText} onChange={setInputText} onSubmit={() => handleSend()} disabled={sendDisabled} sending={sending} />
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleNewThread}
+                className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/[0.1] px-3 py-1.5 text-[11px] text-white"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Thread
+              </button>
+              <select
+                value={selectedProjectCode}
+                onChange={(event) => setSelectedProjectCode(event.target.value)}
+                className="h-8 rounded-full border border-white/20 bg-white/[0.1] px-3.5 text-[11px] text-white outline-none"
+                aria-label="Select project"
+              >
+                {PROJECT_OPTIONS.map((projectCode) => (
+                  <option key={projectCode} value={projectCode}>
+                    {projectCode}
+                  </option>
+                ))}
+              </select>
+              <span className={`text-[11px] ${online ? "text-emerald-200" : "text-red-200"}`}>{online ? "Online" : "Offline"}</span>
+            </div>
+          </div>
+        </section>
+      </BackgroundVideo>
+    </main>
   );
 }

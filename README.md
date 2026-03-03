@@ -16,9 +16,104 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Required variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+
+## Auth Setup (Supabase SSR)
+
+1. Run migration:
+   - `supabase/migrations/202602251730_profiles_auth.sql`
+2. Ensure env vars are present:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or publishable key fallback)
+   - `SUPABASE_SERVICE_ROLE_KEY` (server-only)
+3. Create users in Supabase Auth with temporary passwords.
+4. Create matching rows in `public.profiles` with:
+   - `role`, `profession`, `must_change_password=true`
+5. Login flow:
+   - `/login` -> sign in
+   - if `must_change_password=true` -> redirected to `/auth/change-password`
+   - after update -> redirected to `/`
+
+## Design Tokens Sync (Tokens Studio -> Repo -> CSS)
+
+Figma Tokens Studio is the source of truth for design tokens.
+
+1. Update tokens in Figma (Tokens Studio).
+2. Sync/push token JSON to this repo at `tokens/tokens.json`.
+3. Run `npm run tokens:build` (also runs automatically on `npm run build` via `prebuild`).
+4. Deploy. Generated variables are written to `src/app/tokens.generated.css` and imported by `src/app/globals.css`.
+
+Validation:
+
+```bash
+npm run tokens:build
+npm run dev
+npm run build
+```
+
+## AI Assistant Smoke Test
+
+1. Run Supabase migrations in SQL editor:
+   - `supabase/migrations/20260224_ai_assistant.sql`
+   - `supabase/migrations/20260224_ai_threads_messages_base.sql`
+2. Open `/login` and sign in with your Supabase Auth account.
+3. Open `/ai`, start a new thread, send a message, and verify responses.
+4. Verify thread IDs are UUIDs and no `dev-thread-*` IDs are used.
+5. Confirm no `OPENAI_API_KEY` usage exists in client-side files.
+
+## Transportation Setup Checklist
+
+1. Run migration:
+   - `supabase/migrations/20260225_transportation.sql`
+2. Ensure bucket exists and is private:
+   - `transport-approvals`
+3. Add at least one reporter:
+   - Insert user id into `public.transport_reporters` (for example via SQL editor).
+4. Open `/daily-personal-reports` (or `/personal`), switch to **Transportation** tab.
+5. Verify:
+   - Daily board loads for selected date.
+   - Reporter can submit photo report (morning/evening, trips, plate).
+   - Monthly analytics loads.
+   - Monthly export works (`xlsx` / `csv`).
+
+## Installation Module Setup Checklist
+
+1. Run migration:
+   - `supabase/migrations/202602251300_installations.sql`
+2. Ensure env vars are set:
+   - `SUPABASE_STORAGE_BUCKET` (defaults to `project-files`)
+   - `INSTALLATIONS_ROOT_PREFIX` (optional; defaults to `${projectCode}/2-Daily Field Reports`)
+3. For write operations (`/api/installations/sync`), grant role:
+   - Insert users into `public.user_roles` with `role in ('admin','planner')`
+4. Open `/installations` and click **Sync from Storage**.
+5. Verify:
+   - Calendar month shows highlighted days with reports.
+   - Selecting a day loads rows/totals/pivots and crew.
+   - Month export downloads CSV/XLSX matrix.
+
+## Daily Installation Reports (Field Reports) Setup
+
+1. Run migration:
+   - `supabase/migrations/202602251600_field_reports.sql`
+2. Optional env overrides:
+   - `SUPABASE_STORAGE_BUCKET` (defaults to `imports`)
+   - `FIELD_REPORTS_ROOT_PREFIX` (defaults to `${projectCode}/2-Daily Field Reports`)
+3. Open `/daily-installation-reports`.
+4. Click **Sync from Storage** to scan `${projectCode}/2-Daily Field Reports` and upsert metadata.
+5. Select a date and use:
+   - **Retry import** (import from storage metadata by date), or
+   - **Upload & Import** (manual file upload + parse).
+6. Verify:
+   - Month calendar statuses change (`Missing`, `Pending`, `OK`, `Failed`).
+   - Day `Summary`/`Items`/`Personnel` tabs load data.
+   - **Export month** downloads CSV/XLSX.
 
 ## Learn More
 
@@ -28,17 +123,3 @@ To learn more about Next.js, take a look at the following resources:
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## AI Assistant Smoke Test
-
-1. Run the migration in Supabase SQL Editor with `supabase/migrations/20260224_ai_assistant.sql`.
-2. Start the app and sign in with an admin account.
-3. Open `/ai/knowledge`, add a knowledge card for a project (for example `A27`), and confirm it appears in the list.
-4. Open `/ai`, ask a question for the same project, and confirm the assistant response includes citation pills.
-5. Confirm the OpenAI API key is server-only by searching client code/bundle: no `OPENAI_API_KEY` usage should exist outside route/server files.
