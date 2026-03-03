@@ -4,13 +4,16 @@ import { NextResponse } from "next/server";
 import { uploadFile } from "@/features/files/uploadFile";
 import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { parseInstallationXlsx } from "@/lib/field-reports/parse-installation-xlsx";
+import {
+  detectRevisionFromFileName,
+  FieldReportImportError,
+  ingestFieldReportFromStorageRow,
+  normalizeFieldReportError,
+  parseAndPersistFieldReport,
+} from "@/lib/field-reports/ingest";
 import {
   getFieldReportByDate,
   monthFolderName,
-  replaceFieldReportItems,
-  setFieldReportParseFailed,
-  setFieldReportParseOk,
   toYYMMDD,
   upsertFieldReportRow,
 } from "@/lib/field-reports/service";
@@ -24,77 +27,16 @@ const JsonImportSchema = z.object({
   workDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
-class ImportError extends Error {
-  status: number;
-
-  constructor(message: string, status = 500) {
-    super(message);
-    this.status = status;
-  }
-}
-
-function normalizeError(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return "Field report import failed.";
-}
-
-function detectRevisionFromFileName(fileName: string): string {
-  const match = fileName.match(/_rev(\d{2})/i);
-  if (!match) return "rev00";
-  return `rev${match[1]}`;
-}
-
 async function parseAndPersistReport(args: {
   admin: ReturnType<typeof supabaseAdmin>;
   reportId: string;
   buffer: Buffer;
 }) {
-  let parsed;
-  try {
-    parsed = parseInstallationXlsx(args.buffer);
-  } catch (error) {
-    const message = normalizeError(error);
-    await setFieldReportParseFailed({
-      supabase: args.admin,
-      reportId: args.reportId,
-      message,
-    });
-    throw new ImportError(message, 422);
-  }
-
-  try {
-    const inserted = await replaceFieldReportItems({
-      supabase: args.admin,
-      reportId: args.reportId,
-      items: parsed.items,
-    });
-
-    await setFieldReportParseOk({
-      supabase: args.admin,
-      reportId: args.reportId,
-      summary: {
-        ...parsed.summary,
-        worksheet: parsed.worksheet,
-        headerRow: parsed.headerRow,
-        parsedItems: inserted,
-      },
-    });
-
-    return {
-      worksheet: parsed.worksheet,
-      headerRow: parsed.headerRow,
-      parsedItems: parsed.items.length,
-      upsertedItems: inserted,
-    };
-  } catch (error) {
-    const message = normalizeError(error);
-    await setFieldReportParseFailed({
-      supabase: args.admin,
-      reportId: args.reportId,
-      message,
-    });
-    throw new ImportError(message, 500);
-  }
+  return parseAndPersistFieldReport({
+    supabase: args.admin,
+    reportId: args.reportId,
+    buffer: args.buffer,
+  });
 }
 
 async function importByDateFromStorage(args: {
@@ -109,33 +51,16 @@ async function importByDateFromStorage(args: {
   });
 
   if (!report) {
-    throw new ImportError(`No field report metadata found for ${args.workDate}. Run sync first.`, 404);
+    throw new FieldReportImportError(`No field report metadata found for ${args.workDate}. Run reconcile (Sync Existing Files) first.`, 404);
   }
 
-  const download = await args.admin.storage.from(report.storage_bucket).download(report.storage_path);
-  if (download.error || !download.data) {
-    const message = `Storage download failed: ${download.error?.message || "unknown error"}`;
-    await setFieldReportParseFailed({
-      supabase: args.admin,
-      reportId: report.id,
-      message,
-    });
-    throw new ImportError(message, 500);
-  }
-
-  const buffer = Buffer.from(await download.data.arrayBuffer());
-  const parse = await parseAndPersistReport({
-    admin: args.admin,
-    reportId: report.id,
-    buffer,
+  const parse = await ingestFieldReportFromStorageRow({
+    supabase: args.admin,
+    report,
   });
 
   return {
     mode: "storage",
-    reportId: report.id,
-    workDate: args.workDate,
-    fileName: report.file_name,
-    storagePath: report.storage_path,
     ...parse,
   };
 }
@@ -256,9 +181,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, data: result });
   } catch (error) {
-    if (error instanceof ImportError) {
+    if (error instanceof FieldReportImportError) {
       return NextResponse.json({ ok: false, error: error.message }, { status: error.status });
     }
-    return NextResponse.json({ ok: false, error: normalizeError(error) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: normalizeFieldReportError(error) }, { status: 500 });
   }
 }

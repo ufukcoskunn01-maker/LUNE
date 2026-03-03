@@ -95,6 +95,23 @@ export async function getFieldReportByDate(args: {
     .eq("project_code", args.projectCode)
     .eq("report_type", reportType)
     .eq("work_date", args.workDate)
+    .order("imported_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (result.error) throw new Error(result.error.message);
+  return (result.data || null) as FieldReportRow | null;
+}
+
+export async function getFieldReportByStoragePath(args: {
+  supabase: SupabaseClient;
+  storageBucket: string;
+  storagePath: string;
+}): Promise<FieldReportRow | null> {
+  const result = await args.supabase
+    .from("field_reports")
+    .select("*")
+    .eq("storage_bucket", args.storageBucket)
+    .eq("storage_path", args.storagePath)
     .maybeSingle();
   if (result.error) throw new Error(result.error.message);
   return (result.data || null) as FieldReportRow | null;
@@ -129,13 +146,27 @@ export async function upsertFieldReportRow(args: {
 
   const result = await args.supabase
     .from("field_reports")
-    .upsert(payload, { onConflict: "project_code,report_type,work_date" })
+    .upsert(payload, { onConflict: "storage_bucket,storage_path" })
     .select("*")
     .single();
   if (result.error || !result.data) {
     throw new Error(result.error?.message || "Failed to upsert field report.");
   }
   return result.data as FieldReportRow;
+}
+
+export async function setFieldReportParsePending(args: {
+  supabase: SupabaseClient;
+  reportId: string;
+}): Promise<void> {
+  const result = await args.supabase
+    .from("field_reports")
+    .update({
+      parse_status: "PENDING",
+      parse_error: null,
+    })
+    .eq("id", args.reportId);
+  if (result.error) throw new Error(result.error.message);
 }
 
 export async function setFieldReportParseFailed(args: {
@@ -198,9 +229,17 @@ export async function listMonthFieldReports(args: {
     .eq("report_type", "INSTALLATION")
     .gte("work_date", range.start)
     .lte("work_date", range.end)
-    .order("work_date", { ascending: true });
+    .order("work_date", { ascending: true })
+    .order("imported_at", { ascending: false });
   if (result.error) throw new Error(result.error.message);
-  return (result.data || []) as FieldReportRow[];
+  const rows = (result.data || []) as FieldReportRow[];
+  const latestByDate = new Map<string, FieldReportRow>();
+  for (const row of rows) {
+    if (!latestByDate.has(row.work_date)) {
+      latestByDate.set(row.work_date, row);
+    }
+  }
+  return Array.from(latestByDate.values()).sort((a, b) => a.work_date.localeCompare(b.work_date));
 }
 
 export async function listFieldReportItems(args: {

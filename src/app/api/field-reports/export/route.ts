@@ -3,8 +3,7 @@ import { z } from "zod";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { buildMonthRange, listMonthFieldReports } from "@/lib/field-reports/service";
-import { getMonthRowsFromLatestFiles } from "@/lib/installations/queries";
+import { listMonthFieldReports } from "@/lib/field-reports/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,18 +26,6 @@ type AggregatedRow = {
   unit: string;
   qty: number;
 };
-
-function isMissingFieldReportsSchemaError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error || "");
-  const lowered = message.toLowerCase();
-  return (
-    (lowered.includes("field_reports") || lowered.includes("field_report_items")) &&
-    (lowered.includes("schema cache") ||
-      lowered.includes("could not find the table") ||
-      lowered.includes("relation") ||
-      lowered.includes("does not exist"))
-  );
-}
 
 function csvCell(value: string | number): string {
   const str = String(value ?? "");
@@ -172,65 +159,38 @@ export async function GET(req: Request) {
 
     const { projectCode, month, format } = parsed.data;
     const admin = supabaseAdmin();
-    let rows: AggregatedRow[] = [];
-    try {
-      const reports = await listMonthFieldReports({
-        supabase: admin,
-        projectCode,
-        monthToken: month,
-      });
+    const reports = await listMonthFieldReports({
+      supabase: admin,
+      projectCode,
+      monthToken: month,
+    });
 
-      const reportIds = reports.map((report) => report.id);
-      const itemsResult = reportIds.length
-        ? await admin
-            .from("field_report_items")
-            .select("report_id,zone,floor,system,activity_code,material_code,item_name,unit,qty")
-            .in("report_id", reportIds)
-        : { data: [], error: null };
+    const reportIds = reports.map((report) => report.id);
+    const itemsResult = reportIds.length
+      ? await admin
+          .from("field_report_items")
+          .select("report_id,zone,floor,system,activity_code,material_code,item_name,unit,qty")
+          .in("report_id", reportIds)
+      : { data: [], error: null };
 
-      if (itemsResult.error) {
-        throw new Error(itemsResult.error.message);
-      }
-
-      rows = aggregateRows({
-        reports,
-        items: (itemsResult.data || []) as Array<{
-          report_id: string;
-          zone: string | null;
-          floor: string | null;
-          system: string | null;
-          activity_code: string | null;
-          material_code: string | null;
-          item_name: string | null;
-          unit: string | null;
-          qty: number | null;
-        }>,
-      });
-    } catch (error) {
-      if (!isMissingFieldReportsSchemaError(error)) {
-        throw error;
-      }
-      const range = buildMonthRange(month);
-      const fallbackRows = await getMonthRowsFromLatestFiles({
-        supabase: admin,
-        projectCode,
-        year: range.year,
-        month: range.month,
-      });
-
-      rows = fallbackRows.map((row) => ({
-        date: row.work_date,
-        parseStatus: "OK",
-        zone: "",
-        floor: "",
-        system: "",
-        activityCode: row.activity_code || "",
-        materialCode: "",
-        itemName: row.description || "",
-        unit: "",
-        qty: Number(row.qty || 0),
-      }));
+    if (itemsResult.error) {
+      throw new Error(itemsResult.error.message);
     }
+
+    const rows = aggregateRows({
+      reports,
+      items: (itemsResult.data || []) as Array<{
+        report_id: string;
+        zone: string | null;
+        floor: string | null;
+        system: string | null;
+        activity_code: string | null;
+        material_code: string | null;
+        item_name: string | null;
+        unit: string | null;
+        qty: number | null;
+      }>,
+    });
 
     const baseName = `${projectCode}-DailyInstallationReports-${month}`;
     const encodedName = encodeURIComponent(baseName);

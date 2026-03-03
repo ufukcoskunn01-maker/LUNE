@@ -205,14 +205,13 @@ function sameTimestamp(a: string | null, b: string | null): boolean {
 export async function upsertFieldReportMetadata(args: {
   supabase: SupabaseClient;
   file: ScannedInstallationFile;
-}): Promise<boolean> {
+}): Promise<{ rowId: string; created: boolean; changed: boolean; needsParse: boolean }> {
   const { supabase, file } = args;
   const existingRes = await supabase
     .from("field_reports")
-    .select("id,storage_bucket,storage_path,file_name,revision,file_hash,file_size,last_modified")
-    .eq("project_code", file.projectCode)
-    .eq("report_type", file.reportType)
-    .eq("work_date", file.workDate)
+    .select("id,project_code,report_type,work_date,storage_bucket,storage_path,file_name,revision,file_hash,file_size,last_modified,parse_status")
+    .eq("storage_bucket", file.storageBucket)
+    .eq("storage_path", file.storagePath)
     .maybeSingle();
 
   if (existingRes.error) {
@@ -222,6 +221,9 @@ export async function upsertFieldReportMetadata(args: {
   const existing = existingRes.data as
     | {
         id: string;
+        project_code: string;
+        report_type: string;
+        work_date: string;
         storage_bucket: string;
         storage_path: string;
         file_name: string;
@@ -229,6 +231,7 @@ export async function upsertFieldReportMetadata(args: {
         file_hash: string | null;
         file_size: number | null;
         last_modified: string | null;
+        parse_status: "PENDING" | "OK" | "FAILED";
       }
     | null;
 
@@ -246,12 +249,20 @@ export async function upsertFieldReportMetadata(args: {
       last_modified: file.lastModified,
       parse_status: "PENDING",
       parse_error: null,
-    });
+    }).select("id").single();
     if (insertRes.error) throw new Error(insertRes.error.message);
-    return true;
+    return {
+      rowId: String(insertRes.data.id),
+      created: true,
+      changed: true,
+      needsParse: true,
+    };
   }
 
   const changed =
+    existing.project_code !== file.projectCode ||
+    existing.report_type !== file.reportType ||
+    existing.work_date !== file.workDate ||
     existing.storage_bucket !== file.storageBucket ||
     existing.storage_path !== file.storagePath ||
     existing.file_name !== file.fileName ||
@@ -261,6 +272,9 @@ export async function upsertFieldReportMetadata(args: {
     !sameTimestamp(existing.last_modified || null, file.lastModified || null);
 
   const updatePayload: Record<string, unknown> = {
+    project_code: file.projectCode,
+    report_type: file.reportType,
+    work_date: file.workDate,
     storage_bucket: file.storageBucket,
     storage_path: file.storagePath,
     file_name: file.fileName,
@@ -278,6 +292,11 @@ export async function upsertFieldReportMetadata(args: {
 
   const updateRes = await supabase.from("field_reports").update(updatePayload).eq("id", existing.id);
   if (updateRes.error) throw new Error(updateRes.error.message);
-  return true;
+  return {
+    rowId: existing.id,
+    created: false,
+    changed,
+    needsParse: changed || existing.parse_status !== "OK",
+  };
 }
 

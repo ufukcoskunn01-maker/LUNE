@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getFieldReportByDate, listFieldReportItems } from "@/lib/field-reports/service";
-import { getDayDetail } from "@/lib/installations/queries";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,18 +29,6 @@ function toNumber(value: unknown): number {
     if (Number.isFinite(parsed)) return parsed;
   }
   return 0;
-}
-
-function isMissingFieldReportsSchemaError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error || "");
-  const lowered = message.toLowerCase();
-  return (
-    (lowered.includes("field_reports") || lowered.includes("field_report_items")) &&
-    (lowered.includes("schema cache") ||
-      lowered.includes("could not find the table") ||
-      lowered.includes("relation") ||
-      lowered.includes("does not exist"))
-  );
 }
 
 async function loadAttendanceSnapshot(args: {
@@ -131,119 +118,24 @@ export async function GET(req: Request) {
     const { projectCode, date } = parsed.data;
     const admin = supabaseAdmin();
 
-    let report: Awaited<ReturnType<typeof getFieldReportByDate>> = null;
-    let fieldReportItems: Awaited<ReturnType<typeof listFieldReportItems>> = [];
-    let useInstallationsFallback = false;
+    const report = await getFieldReportByDate({
+      supabase: admin,
+      projectCode,
+      workDate: date,
+    });
 
-    try {
-      report = await getFieldReportByDate({
-        supabase: admin,
-        projectCode,
-        workDate: date,
-      });
-
-      if (report) {
-        fieldReportItems = await listFieldReportItems({
+    const fieldReportItems = report
+      ? await listFieldReportItems({
           supabase: admin,
           reportId: report.id,
-        });
-      }
-    } catch (error) {
-      if (!isMissingFieldReportsSchemaError(error)) {
-        throw error;
-      }
-      useInstallationsFallback = true;
-    }
+        })
+      : [];
 
     let totalQty = 0;
     const zoneSet = new Set<string>();
     const floorSet = new Set<string>();
     const materialSet = new Set<string>();
     const attendance = await loadAttendanceSnapshot({ admin, projectCode, workDate: date });
-
-    if (useInstallationsFallback) {
-      const detail = await getDayDetail({
-        supabase: admin,
-        projectCode,
-        date,
-      });
-
-      if (!detail.latestFile) {
-        return NextResponse.json({
-          ok: true,
-          data: {
-            projectCode,
-            date,
-            meta: null,
-            summary: {},
-            totals: {
-              itemCount: 0,
-              totalQty: 0,
-              distinctZones: 0,
-              distinctFloors: 0,
-              distinctMaterials: 0,
-            },
-            items: [],
-            attendance,
-          },
-        });
-      }
-
-      return NextResponse.json({
-        ok: true,
-        data: {
-          projectCode,
-          date,
-          meta: {
-            id: detail.latestFile.id,
-            project_code: detail.latestFile.project_code,
-            report_type: "INSTALLATION",
-            work_date: detail.latestFile.work_date,
-            storage_bucket: process.env.SUPABASE_STORAGE_BUCKET || "project-files",
-            storage_path: detail.latestFile.storage_path,
-            file_name: detail.latestFile.filename,
-            revision: `rev${String(detail.latestFile.rev).padStart(2, "0")}`,
-            file_hash: null,
-            file_size: detail.latestFile.file_size,
-            last_modified: detail.latestFile.last_modified,
-            imported_at: detail.latestFile.created_at,
-            parse_status: "OK",
-            parse_error: null,
-            summary: {
-              rows_count: detail.totals.rows_count,
-              total_qty: detail.totals.total_qty,
-              total_manhours: detail.totals.total_manhours,
-            },
-          },
-          summary: {
-            rows_count: detail.totals.rows_count,
-            total_qty: detail.totals.total_qty,
-            total_manhours: detail.totals.total_manhours,
-          },
-          totals: {
-            itemCount: detail.totals.rows_count,
-            totalQty: detail.totals.total_qty,
-            distinctZones: 0,
-            distinctFloors: 0,
-            distinctMaterials: 0,
-          },
-          items: detail.rows.map((row, index) => ({
-            id: String(row.id),
-            row_no: index + 1,
-            zone: null,
-            floor: null,
-            system: null,
-            activity_code: row.activity_code,
-            material_code: null,
-            item_name: row.description,
-            unit: row.uom,
-            qty: row.qty,
-            notes: null,
-          })),
-          attendance,
-        },
-      });
-    }
 
     if (!report) {
       return NextResponse.json({

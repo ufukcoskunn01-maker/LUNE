@@ -171,6 +171,7 @@ export default function DailyInstallationReportsWorkspace() {
   const [dayLoading, setDayLoading] = useState(false);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [exporting, setExporting] = useState<null | "csv" | "xlsx">(null);
 
   const [monthError, setMonthError] = useState<string | null>(null);
@@ -282,17 +283,20 @@ export default function DailyInstallationReportsWorkspace() {
   }, [loadAttendance, loadDay, loadMonth]);
 
   const runSync = useCallback(async (silent = false) => {
+    if (autoSyncRunningRef.current) return;
+    autoSyncRunningRef.current = true;
     if (!silent) setActionInfo(null);
+    if (!silent) setSyncing(true);
     try {
-      const res = await fetch("/api/field-reports/sync", {
+      const res = await fetch("/api/daily-installation-reports/reconcile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectCode }),
+        body: JSON.stringify({ projectCode, missingOnly: true }),
       });
       const payload = (await res.json().catch(() => null)) as {
         ok?: boolean;
         error?: string;
-        data?: { scanned?: number; upserted?: number; bucket?: string; rootPrefix?: string };
+        data?: { scanned?: number; considered?: number; registered?: number; processed?: number; bucket?: string; rootPrefix?: string };
         errors?: string[];
       } | null;
 
@@ -301,15 +305,20 @@ export default function DailyInstallationReportsWorkspace() {
       }
 
       const scanned = payload?.data?.scanned ?? 0;
-      const upserted = payload?.data?.upserted ?? 0;
+      const considered = payload?.data?.considered ?? 0;
+      const registered = payload?.data?.registered ?? 0;
+      const processed = payload?.data?.processed ?? 0;
       const source = payload?.data?.bucket && payload?.data?.rootPrefix ? ` ${payload.data.bucket}/${payload.data.rootPrefix}` : "";
       const warns = payload?.errors?.length ? ` (${payload.errors.length} warning)` : "";
       if (!silent) {
-        setActionInfo(`Sync complete: scanned ${scanned}, upserted ${upserted}.${warns}${source ? ` Source:${source}` : ""}`);
+        setActionInfo(`Sync complete: scanned ${scanned}, considered ${considered}, registered ${registered}, processed ${processed}.${warns}${source ? ` Source:${source}` : ""}`);
       }
       await refreshAll();
     } catch (error) {
       if (!silent) setActionInfo(error instanceof Error ? error.message : "Sync failed.");
+    } finally {
+      autoSyncRunningRef.current = false;
+      if (!silent) setSyncing(false);
     }
   }, [projectCode, refreshAll]);
 
@@ -342,13 +351,8 @@ export default function DailyInstallationReportsWorkspace() {
     let cancelled = false;
 
     const runAutoSync = async () => {
-      if (cancelled || autoSyncRunningRef.current) return;
-      autoSyncRunningRef.current = true;
-      try {
-        await runSync(true);
-      } finally {
-        autoSyncRunningRef.current = false;
-      }
+      if (cancelled) return;
+      await runSync(true);
     };
 
     void runAutoSync();
@@ -552,6 +556,16 @@ export default function DailyInstallationReportsWorkspace() {
               void uploadAndImport(file);
             }}
           />
+
+          <Button
+            onClick={() => void runSync(false)}
+            className="h-9 gap-2 border-white/20 bg-black/45 text-zinc-100 hover:bg-black/60"
+            disabled={syncing}
+            aria-label="Sync existing files from storage"
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
+            Sync Existing Files
+          </Button>
 
           <Button
             onClick={() => fileRef.current?.click()}
