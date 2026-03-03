@@ -1,7 +1,37 @@
 import ExcelJS from "exceljs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
-import { normalizeProjectDocumentSourceRows, type DocumentWorkflowStatus, type ProjectDocumentSourceRow } from "@/lib/project-documents-follow-up";
+import type { DocumentWorkflowStatus } from "@/lib/project-documents-follow-up";
+
+export interface ProjectDocumentSourceRow {
+  id: string;
+  documentCode: string;
+  title: string;
+  type: string;
+  discipline: string;
+  project: string;
+  packageCode: string;
+  revision: number;
+  workflowStatus: DocumentWorkflowStatus;
+  requiredDate: string;
+  reviewDueDate: string;
+  approvedDate: string;
+  issuedForConstructionDate: string;
+  supplier: string;
+  responsible: string;
+  linkedMaterialCode: string;
+  blockedByMaterial: boolean;
+  packageReadiness: number;
+  lastUpdate: string;
+  notes: string;
+  oneCReferenceId: string;
+  externalSyncId: string;
+  syncStatus: string;
+  externalStatus: string;
+  lastSyncTime: string;
+  sourceSystem: string;
+  syncErrorMessage: string;
+}
 
 export type ProjectDocumentTemplateDownload = {
   bucket: string;
@@ -155,6 +185,38 @@ function toWorkflowStatus(value: string): DocumentWorkflowStatus {
   if (normalized.includes("review")) return "In Review";
   if (normalized.includes("submit")) return "Submitted";
   return "Draft";
+}
+
+function normalizeProjectDocumentSourceRows(rows: Array<Partial<ProjectDocumentSourceRow>>): ProjectDocumentSourceRow[] {
+  return rows.map((row, index) => ({
+    id: String(row.id ?? `ROW-${index + 1}`),
+    documentCode: String(row.documentCode ?? "").trim(),
+    title: String(row.title ?? "").trim(),
+    type: String(row.type ?? "").trim(),
+    discipline: String(row.discipline ?? "").trim(),
+    project: String(row.project ?? "").trim(),
+    packageCode: String(row.packageCode ?? "").trim(),
+    revision: Number.isFinite(Number(row.revision)) ? Number(row.revision) : 0,
+    workflowStatus: row.workflowStatus ? toWorkflowStatus(String(row.workflowStatus)) : "Draft",
+    requiredDate: String(row.requiredDate ?? "").trim(),
+    reviewDueDate: String(row.reviewDueDate ?? "").trim(),
+    approvedDate: String(row.approvedDate ?? "").trim(),
+    issuedForConstructionDate: String(row.issuedForConstructionDate ?? "").trim(),
+    supplier: String(row.supplier ?? "").trim(),
+    responsible: String(row.responsible ?? "").trim(),
+    linkedMaterialCode: String(row.linkedMaterialCode ?? "").trim(),
+    blockedByMaterial: Boolean(row.blockedByMaterial),
+    packageReadiness: Number.isFinite(Number(row.packageReadiness)) ? Number(row.packageReadiness) : 0,
+    lastUpdate: String(row.lastUpdate ?? "").trim(),
+    notes: String(row.notes ?? "").trim(),
+    oneCReferenceId: String(row.oneCReferenceId ?? "").trim(),
+    externalSyncId: String(row.externalSyncId ?? "").trim(),
+    syncStatus: String(row.syncStatus ?? "").trim(),
+    externalStatus: String(row.externalStatus ?? "").trim(),
+    lastSyncTime: String(row.lastSyncTime ?? "").trim(),
+    sourceSystem: String(row.sourceSystem ?? "").trim(),
+    syncErrorMessage: String(row.syncErrorMessage ?? "").trim(),
+  }));
 }
 
 function coerceValue(key: keyof ProjectDocumentSourceRow, value: string): unknown {
@@ -373,4 +435,3 @@ export function normalizeWorkflowStatus(input: string): DocumentWorkflowStatus {
   const match = WORKFLOW_STATUS_VALUES.find((status) => status.toLowerCase() === normalized.toLowerCase());
   return match || toWorkflowStatus(normalized);
 }
-
