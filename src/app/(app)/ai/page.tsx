@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +53,7 @@ async function apiCall<T>(path: string, token: string, init?: RequestInit): Prom
   return json.data as T;
 }
 
-export default function AIPage() {
+function AIPageContent() {
   const searchParams = useSearchParams();
   const [token, setToken] = useState<string | null>(null);
   const [projectCode, setProjectCode] = useState("A27");
@@ -253,5 +253,13 @@ export default function AIPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function AIPage() {
+  return (
+    <Suspense fallback={<div className="p-4">Loading...</div>}>
+      <AIPageContent />
+    </Suspense>
   );
 }
