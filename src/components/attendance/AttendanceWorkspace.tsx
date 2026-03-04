@@ -81,7 +81,7 @@ type AvailableFilesResponse = {
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-const DEFAULT_REPORT_DATE = "2026-02-19";
+const DEFAULT_REPORT_DATE = new Date().toISOString().slice(0, 10);
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
@@ -830,7 +830,7 @@ export default function AttendanceWorkspace(): React.ReactElement {
           </div>
         </div>
 
-        {summaryLoading && <div className="mt-3 text-xs text-zinc-400">Loading personal reports…</div>}
+        {summaryLoading && <div className="mt-3 text-xs text-zinc-400">Loading personal reports...</div>}
         {summaryError && <div className="mt-3 text-xs text-red-400">{summaryError}</div>}
         {noDataImported ? (
           <div className="mt-4 rounded-2xl border border-amber-300/25 bg-amber-500/10 p-4 text-sm text-amber-100">
@@ -977,7 +977,7 @@ export default function AttendanceWorkspace(): React.ReactElement {
           <div className="space-y-4">
             <div className="rounded-xl border bg-card p-3 text-sm">
               <div className="font-medium">
-                {selection.segment === "All" ? "All Segments" : selection.segment} • {selection.discipline} • {selection.status}
+                {selection.segment === "All" ? "All Segments" : selection.segment} | {selection.discipline} | {selection.status}
               </div>
               <div className="mt-1 text-xs text-muted-foreground">Rows: {people.length}</div>
             </div>
@@ -1003,7 +1003,7 @@ export default function AttendanceWorkspace(): React.ReactElement {
 
             <input
               className="w-full rounded-xl border bg-background px-3 py-2 text-sm"
-              placeholder="Search name…"
+              placeholder="Search name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -1043,7 +1043,7 @@ export default function AttendanceWorkspace(): React.ReactElement {
                   <div className="col-span-2 text-right">Status</div>
                 </div>
 
-                {peopleLoading && <div className="px-3 py-3 text-sm text-muted-foreground">Loading…</div>}
+                {peopleLoading && <div className="px-3 py-3 text-sm text-muted-foreground">Loading...</div>}
 
                 {!peopleLoading &&
                   people.map((p) => (

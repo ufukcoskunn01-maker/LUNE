@@ -12,7 +12,6 @@ const QuerySchema = z.object({
 });
 const RAW_MIN_SYNC_WORK_DATE = (process.env.FIELD_INSTALLATION_MIN_WORK_DATE || "").trim();
 const MIN_SYNC_WORK_DATE = /^\d{4}-\d{2}-\d{2}$/.test(RAW_MIN_SYNC_WORK_DATE) ? RAW_MIN_SYNC_WORK_DATE : null;
-const EXCEL_DATE_PRIORITY_BEFORE = "2025-12-25";
 
 type StorageItem = {
   name?: string | null;
@@ -238,7 +237,9 @@ function normalizeText(value: unknown): string {
 
 function toIsoDate(value: unknown): string | null {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    const iso = value.toISOString().slice(0, 10);
+    // Source workbooks are authored in Moscow time; normalize before slicing date.
+    const shifted = new Date(value.getTime() + 3 * 60 * 60 * 1000);
+    const iso = shifted.toISOString().slice(0, 10);
     return isReasonableWorkDate(iso) ? iso : null;
   }
 
@@ -279,7 +280,8 @@ function toIsoDate(value: unknown): string | null {
 
   const maybeDate = new Date(text);
   if (!Number.isNaN(maybeDate.getTime())) {
-    const iso = maybeDate.toISOString().slice(0, 10);
+    const shifted = new Date(maybeDate.getTime() + 3 * 60 * 60 * 1000);
+    const iso = shifted.toISOString().slice(0, 10);
     if (isReasonableWorkDate(iso)) return iso;
   }
   return null;
@@ -439,11 +441,10 @@ export async function POST(req: Request) {
           let workDate = nameDate;
           let excelDate: string | null = null;
 
-          if (!workDate || workDate <= EXCEL_DATE_PRIORITY_BEFORE) {
+          if (!workDate) {
             excelDate = await readWorkbookReportDate({ admin, bucket, storagePath });
             if (excelDate) {
-              // Workbook date is authoritative once it passes plausibility checks.
-              // This fixes legacy files where the storage filename token is wrong.
+              // Fallback only when filename date cannot be parsed.
               workDate = excelDate;
             }
           }
@@ -458,7 +459,7 @@ export async function POST(req: Request) {
           }
 
           if (excelDate && nameDate && excelDate !== nameDate) {
-            warnings.push(`Date mismatch fixed by workbook for ${bucket}/${storagePath}: name=${nameDate}, sheet=${excelDate}`);
+            warnings.push(`Date mismatch detected for ${bucket}/${storagePath}: name=${nameDate}, sheet=${excelDate}. Kept filename date.`);
           }
           if (MIN_SYNC_WORK_DATE && !isOnOrAfterDate(workDate, MIN_SYNC_WORK_DATE)) {
             skippedBeforeStartDate += 1;
@@ -478,6 +479,12 @@ export async function POST(req: Request) {
               file_kind: "installation",
               revision: parseRevision(fileName),
               source_created_at: new Date().toISOString(),
+              ingest_status: "queued",
+              parse_error: null,
+              last_error: null,
+              uploaded_at: new Date().toISOString(),
+              processing_started_at: null,
+              processing_finished_at: null,
             },
             { onConflict: "bucket_id,storage_path" }
           );

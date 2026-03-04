@@ -20,6 +20,22 @@ type FileRow = {
   file_name: string;
   file_kind: string | null;
   revision: string | null;
+  ingest_status: string | null;
+  parse_error: string | null;
+  last_error: string | null;
+  uploaded_at: string | null;
+  processing_started_at: string | null;
+  processing_finished_at: string | null;
+  processed_at: string | null;
+  last_retry_at: string | null;
+  parser_version: string | null;
+  warning_count: number | null;
+  rows_count: number | null;
+  parsed_material_rows: number | null;
+  parsed_labor_rows: number | null;
+  inserted_material_rows: number | null;
+  inserted_labor_rows: number | null;
+  distinct_row_dates: unknown;
   updated_at: string | null;
 };
 
@@ -47,6 +63,7 @@ type WarningItem = {
 
 type MaterialRow = {
   id: string;
+  row_no: number | null;
   project_code: string;
   work_date: string;
   source_file_id: string;
@@ -57,6 +74,15 @@ type MaterialRow = {
   description: string | null;
   unit: string | null;
   qty: number | null;
+  manhours: number | null;
+  report_date: string | null;
+  team_no: number | null;
+  elevation: string | null;
+  install_action: string | null;
+  location: string | null;
+  project_name: string | null;
+  orientation: string | null;
+  comment: string | null;
   crew: number | null;
   raw: Record<string, unknown> | null;
 };
@@ -180,7 +206,7 @@ export async function GET(req: Request) {
 
     const filesRes = await admin
       .from("field_installation_files")
-      .select("id,project_code,work_date,bucket_id,storage_path,file_name,file_kind,revision,updated_at")
+      .select("id,project_code,work_date,bucket_id,storage_path,file_name,file_kind,revision,ingest_status,parse_error,last_error,uploaded_at,processing_started_at,processing_finished_at,processed_at,last_retry_at,parser_version,warning_count,rows_count,parsed_material_rows,parsed_labor_rows,inserted_material_rows,inserted_labor_rows,distinct_row_dates,updated_at")
       .eq("project_code", projectCode)
       .eq("work_date", date)
       .returns<FileRow[]>();
@@ -214,13 +240,12 @@ export async function GET(req: Request) {
         .maybeSingle<SummaryRow>(),
       admin
         .from("field_installation_rows")
-        .select("id,project_code,work_date,source_file_id,zone,floor,budget_code,activity_code,description,unit,qty,crew,raw")
+        .select(
+          "id,row_no,project_code,work_date,source_file_id,zone,floor,budget_code,activity_code,description,unit,qty,manhours,report_date,team_no,elevation,install_action,location,project_name,orientation,comment,crew,raw"
+        )
         .eq("source_file_id", latestFile.id)
+        .order("row_no", { ascending: true })
         .order("zone", { ascending: true })
-        .order("floor", { ascending: true })
-        .order("budget_code", { ascending: true })
-        .order("activity_code", { ascending: true })
-        .order("description", { ascending: true })
         .returns<MaterialRow[]>(),
       admin
         .from("field_installation_labor_rows")
@@ -274,7 +299,7 @@ export async function GET(req: Request) {
       const raw = (row.raw || {}) as Record<string, unknown>;
       return {
         id: row.id,
-        row_no: toNumber(raw.line_no) ?? idx + 1,
+        row_no: row.row_no ?? toNumber(raw.line_no) ?? idx + 1,
         project_code: row.project_code,
         work_date: row.work_date,
         source_file_id: row.source_file_id,
@@ -285,14 +310,15 @@ export async function GET(req: Request) {
         description: row.description,
         unit: row.unit,
         qty: row.qty,
-        manhours: toNumber(raw.manhours),
-        team_no: row.crew,
-        elevation: raw.elevation ? String(raw.elevation) : null,
-        install_action: raw.install_or_remove ? String(raw.install_or_remove) : null,
-        location: raw.location ? String(raw.location) : null,
-        project_name: raw.project_name ? String(raw.project_name) : null,
-        orientation: raw.orientation ? String(raw.orientation) : null,
-        comment: raw.comment ? String(raw.comment) : null,
+        report_date: row.report_date,
+        manhours: row.manhours ?? toNumber(raw.manhours),
+        team_no: row.team_no ?? row.crew,
+        elevation: row.elevation ?? (raw.elevation ? String(raw.elevation) : null),
+        install_action: row.install_action ?? (raw.install_or_remove ? String(raw.install_or_remove) : null),
+        location: row.location ?? (raw.location ? String(raw.location) : null),
+        project_name: row.project_name ?? (raw.project_name ? String(raw.project_name) : null),
+        orientation: row.orientation ?? (raw.orientation ? String(raw.orientation) : null),
+        comment: row.comment ?? (raw.comment ? String(raw.comment) : null),
       };
     });
 
@@ -320,12 +346,33 @@ export async function GET(req: Request) {
         updated_at: latestFile.updated_at,
       } as const);
 
+    const distinctReportDates = Array.from(new Set(rows.map((row) => row.report_date).filter(Boolean))).sort();
+
     return NextResponse.json({
       ok: true,
       data: {
         file: latestFile,
         summary: normalizedSummary,
         rows,
+        ingest: {
+          status: latestFile.ingest_status || "uploaded",
+          parse_error: latestFile.parse_error || latestFile.last_error || null,
+          uploaded_at: latestFile.uploaded_at || null,
+          processing_started_at: latestFile.processing_started_at || null,
+          processing_finished_at: latestFile.processing_finished_at || null,
+          processed_at: latestFile.processed_at || null,
+          last_retry_at: latestFile.last_retry_at || null,
+          parser_version: latestFile.parser_version || null,
+          warning_count: latestFile.warning_count ?? 0,
+          parsed_material_rows: latestFile.parsed_material_rows ?? 0,
+          parsed_labor_rows: latestFile.parsed_labor_rows ?? 0,
+          inserted_material_rows: latestFile.inserted_material_rows ?? rows.length,
+          inserted_labor_rows: latestFile.inserted_labor_rows ?? 0,
+          distinct_row_dates:
+            Array.isArray(latestFile.distinct_row_dates) && latestFile.distinct_row_dates.length
+              ? latestFile.distinct_row_dates
+              : distinctReportDates,
+        },
       },
     });
   } catch (error) {

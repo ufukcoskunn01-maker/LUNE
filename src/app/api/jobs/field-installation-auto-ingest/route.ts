@@ -2,7 +2,8 @@ import { z } from "zod";
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { importFieldInstallationDay } from "@/lib/field-installation/import-job";
+import { importFieldInstallationSourceFile } from "@/lib/field-installation/import-job";
+import { buildIngestQueue, DEFAULT_PROCESSING_TIMEOUT_MS } from "@/lib/field-installation/ingestion-lifecycle";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,12 @@ type FileRow = {
   work_date: string;
   revision: string | null;
   updated_at: string | null;
+  ingest_status: string | null;
+  processing_started_at: string | null;
+  processing_finished_at: string | null;
+  processed_at: string | null;
+  inserted_material_rows: number | null;
+  inserted_labor_rows: number | null;
 };
 
 function monthRange(token: string): { start: string; end: string } {
@@ -48,18 +55,15 @@ function keepLatestPerDate(files: FileRow[]): FileRow[] {
       map.set(file.work_date, file);
       continue;
     }
-
     const revDiff = revisionRank(file.revision) - revisionRank(prev.revision);
     if (revDiff > 0) {
       map.set(file.work_date, file);
       continue;
     }
-
     if (revDiff === 0 && String(file.updated_at || "") > String(prev.updated_at || "")) {
       map.set(file.work_date, file);
     }
   }
-
   return Array.from(map.values()).sort((a, b) => a.work_date.localeCompare(b.work_date));
 }
 
@@ -94,7 +98,7 @@ export async function POST(req: Request) {
     for (;;) {
       let pageQuery = admin
         .from("field_installation_files")
-        .select("id,project_code,work_date,revision,updated_at")
+        .select("id,project_code,work_date,revision,updated_at,ingest_status,processing_started_at,processing_finished_at,processed_at,inserted_material_rows,inserted_labor_rows")
         .eq("project_code", projectCode);
 
       if (month) {
@@ -122,14 +126,8 @@ export async function POST(req: Request) {
     }
 
     const [summaryRes, rowsRes] = await Promise.all([
-      admin
-        .from("field_installation_day_summary")
-        .select("source_file_id,work_date")
-        .in("source_file_id", fileIds),
-      admin
-        .from("field_installation_rows")
-        .select("source_file_id,work_date")
-        .in("source_file_id", fileIds),
+      admin.from("field_installation_day_summary").select("source_file_id,work_date").in("source_file_id", fileIds),
+      admin.from("field_installation_rows").select("source_file_id,work_date").in("source_file_id", fileIds),
     ]);
 
     if (summaryRes.error) {
@@ -151,54 +149,49 @@ export async function POST(req: Request) {
       const workDate = String((row as { work_date?: string }).work_date || "");
       if (sourceFileId && workDate) rowBySource.set(sourceFileId, workDate);
     }
-    const summaryDateSet = new Set((summaryRes.data || []).map((row) => String((row as { work_date?: string }).work_date || "")));
-    const rowsDateSet = new Set((rowsRes.data || []).map((row) => String((row as { work_date?: string }).work_date || "")));
 
-    let skipped = 0;
-    let ingested = 0;
-    const details: Array<{ fileId: string; workDate: string; status: "skipped" | "ingested" | "failed"; message?: string }> = [];
-
-    const missingFiles = latestFiles.filter((file) => {
-      const sourceSummaryDate = summaryBySource.get(file.id);
-      const sourceRowsDate = rowBySource.get(file.id);
-      const hasSourceData = sourceSummaryDate === file.work_date && sourceRowsDate === file.work_date;
-      const hasDateData = summaryDateSet.has(file.work_date) && rowsDateSet.has(file.work_date);
-      return !(hasSourceData || hasDateData);
+    const queueDecision = buildIngestQueue(latestFiles, {
+      bySourceSummary: summaryBySource,
+      bySourceRows: rowBySource,
+      nowMs: Date.now(),
+      timeoutMs: DEFAULT_PROCESSING_TIMEOUT_MS,
     });
-    const ingestQueue = typeof limit === "number" ? missingFiles.slice(0, limit) : missingFiles;
 
-    for (const file of latestFiles) {
-      const alreadyIngested =
-        summaryBySource.get(file.id) === file.work_date &&
-        rowBySource.get(file.id) === file.work_date;
-      if (alreadyIngested) {
-        skipped += 1;
-        details.push({ fileId: file.id, workDate: file.work_date, status: "skipped" });
-      }
+    const queued = typeof limit === "number" ? queueDecision.queue.slice(0, limit) : queueDecision.queue;
+    const details: Array<{ fileId: string; workDate: string; status: "skipped" | "ingested" | "failed"; reason?: string; message?: string }> = [];
+
+    for (const entry of queueDecision.skipped) {
+      details.push({
+        fileId: entry.file.id,
+        workDate: entry.file.work_date,
+        status: "skipped",
+        reason: entry.reason,
+      });
     }
 
-    for (const file of ingestQueue) {
+    let ingested = 0;
+    for (const entry of queued) {
       try {
-        await importFieldInstallationDay({
+        await importFieldInstallationSourceFile({
           admin,
-          projectCode,
-          workDate: file.work_date,
+          fileId: entry.file.id,
+          force: entry.reason === "processing_stale" || entry.reason === "failed_retry",
         });
         ingested += 1;
-        details.push({ fileId: file.id, workDate: file.work_date, status: "ingested" });
+        details.push({ fileId: entry.file.id, workDate: entry.file.work_date, status: "ingested", reason: entry.reason });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Ingestion failed.";
-        details.push({ fileId: file.id, workDate: file.work_date, status: "failed", message });
+        details.push({ fileId: entry.file.id, workDate: entry.file.work_date, status: "failed", reason: entry.reason, message });
       }
     }
 
     const failed = details.filter((row) => row.status === "failed").length;
-
     return NextResponse.json({
       ok: true,
       data: {
         scanned: latestFiles.length,
-        skipped,
+        skipped: queueDecision.skipped.length,
+        queued: queued.length,
         ingested,
         failed,
         details,

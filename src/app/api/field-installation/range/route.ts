@@ -159,11 +159,7 @@ export async function GET(req: Request) {
       )
       .in("source_file_id", fileIds)
       .order("work_date", { ascending: false })
-      .order("zone", { ascending: true })
-      .order("floor", { ascending: true })
-      .order("budget_code", { ascending: true })
-      .order("activity_code", { ascending: true })
-      .order("description", { ascending: true })
+      .order("row_no", { ascending: true })
       .returns<RangeRow[]>();
 
     if (rowsRes.error) {

@@ -3,8 +3,18 @@ import TransportationWorkspace from "@/components/personal/TransportationWorkspa
 import { Suspense } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function DailyPersonalReportsPage() {
+type PageProps = {
+  searchParams?: Promise<{ date?: string }>;
+};
+
+function isIsoDate(value: string | undefined): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+export default async function DailyPersonalReportsPage({ searchParams }: PageProps) {
+  const params = (await searchParams) || {};
   const todayIso = new Date().toISOString().slice(0, 10);
+  const selectedDate = isIsoDate(params.date) ? params.date : todayIso;
 
   return (
     <div className="relative overflow-hidden rounded-[30px] border border-white/15">
@@ -38,7 +48,7 @@ export default function DailyPersonalReportsPage() {
           </TabsContent>
 
           <TabsContent value="transportation">
-            <TransportationWorkspace initialDate={todayIso} />
+            <TransportationWorkspace initialDate={selectedDate} />
           </TabsContent>
         </Tabs>
       </div>

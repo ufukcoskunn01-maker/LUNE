@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -56,8 +56,10 @@ type DayRow = {
   id: string;
   work_date: string;
   row_no: number | null;
+  location: string | null;
   zone: string | null;
   floor: string | null;
+  elevation: string | null;
   budget_code: string | null;
   activity_code: string | null;
   description: string | null;
@@ -178,10 +180,36 @@ function isLegacyPeopleMismatchWarning(message: string): boolean {
   return normalized.startsWith("manhour mismatch:") && normalized.includes("people=");
 }
 
+function toStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item ?? "").trim())
+    .filter((item) => item.length > 0);
+}
+
+function extractPersonnelColumns(details: Record<string, unknown> | null): {
+  installation: string[];
+  personal: string[];
+  isPartial: boolean;
+} {
+  if (!details) return { installation: [], personal: [], isPartial: true };
+
+  const installation = toStringList(details.installation_direct_names);
+  const personal = toStringList(details.personal_electrical_direct_names);
+  const missingInPersonal = toStringList(details.missing_in_personal);
+  const missingInInstallation = toStringList(details.missing_in_installation);
+
+  const installationList = installation.length ? installation : missingInPersonal;
+  const personalList = personal.length ? personal : missingInInstallation;
+  const isPartial = !installation.length || !personal.length;
+
+  return { installation: installationList, personal: personalList, isPartial };
+}
+
 function displayProjectName(value: string | null): string {
   const raw = (value || "").trim();
   if (!raw) return "-";
-  const normalized = raw.replace(/^МИ\.?\s*2020\.?\s*154-Р-\s*/i, "").trim();
+  const normalized = raw.replace(/^ÐœÐ˜\.?\s*2020\.?\s*154-Ð -\s*/i, "").trim();
   return normalized || "-";
 }
 
@@ -216,6 +244,7 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
   const [rangeRows, setRangeRows] = useState<DayRow[]>([]);
 
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [authGateError, setAuthGateError] = useState<string | null>(null);
   const [loadingDates, setLoadingDates] = useState(false);
   const [loadingMonth, setLoadingMonth] = useState(false);
   const [loadingDay, setLoadingDay] = useState(false);
@@ -238,6 +267,7 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
   const [dayError, setDayError] = useState<string | null>(null);
   const [rangeError, setRangeError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
+  const [showPersonnelMismatchDetails, setShowPersonnelMismatchDetails] = useState(false);
 
   const [zoneFilter, setZoneFilter] = useState("ALL");
   const [floorFilter, setFloorFilter] = useState("ALL");
@@ -250,10 +280,22 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
     let alive = true;
     (async () => {
       try {
-        await fetchData<{ user: { id: string } }>("/api/field-installation/me");
-        if (alive) setAuthed(true);
+        const res = await fetch("/api/field-installation/me", { cache: "no-store" });
+        if (!alive) return;
+        if (res.status === 401) {
+          setAuthed(false);
+          return;
+        }
+        if (!res.ok) {
+          setAuthed(true);
+          setAuthGateError(`Module auth check failed (${res.status}).`);
+          return;
+        }
+        setAuthed(true);
       } catch {
-        if (alive) setAuthed(false);
+        if (!alive) return;
+        setAuthed(true);
+        setAuthGateError("Module auth check failed. Keeping workspace available.");
       }
     })();
     return () => {
@@ -671,40 +713,6 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((row) => {
-      const fullText = [
-        row.zone || "",
-        row.floor || "",
-        row.budget_code || "",
-        row.activity_code || "",
-        row.description || "",
-        row.unit || "",
-        row.orientation || "",
-        row.install_action || "",
-        row.project_name || "",
-        row.comment || "",
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      const isSignatureLine =
-        fullText.includes("представитель пальмиры груп") ||
-        fullText.includes("представитель пальмиры групп");
-      if (isSignatureLine) return false;
-
-      const hasAnyDisplayValue =
-        Boolean((row.zone || "").trim()) ||
-        Boolean((row.floor || "").trim()) ||
-        Boolean((row.budget_code || "").trim()) ||
-        Boolean((row.activity_code || "").trim()) ||
-        Boolean((row.description || "").trim()) ||
-        Boolean((row.unit || "").trim()) ||
-        Boolean((row.orientation || "").trim()) ||
-        Boolean((row.install_action || "").trim()) ||
-        row.qty !== null ||
-        row.manhours !== null ||
-        row.team_no !== null;
-      if (!hasAnyDisplayValue) return false;
-
       if (zoneFilter !== "ALL" && (row.zone || "") !== zoneFilter) return false;
       if (floorFilter !== "ALL" && (row.floor || "") !== floorFilter) return false;
       if (budgetFilter !== "ALL" && (row.budget_code || "") !== budgetFilter) return false;
@@ -718,12 +726,10 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
 
   const monthTotals = useMemo(() => {
     if (embedded) {
-      const targetMonth = monthFilter === "ALL" ? null : monthFilter;
-      const scopedRows = targetMonth ? rows.filter((row) => (row.work_date || "").startsWith(`${targetMonth}-`)) : rows;
       return {
-        month: targetMonth,
-        qty: scopedRows.reduce((sum, row) => sum + Number(row.qty || 0), 0),
-        manhours: scopedRows.reduce((sum, row) => sum + Number(row.manhours || 0), 0),
+        month: null as string | null,
+        qty: rows.reduce((sum, row) => sum + Number(row.qty || 0), 0),
+        manhours: rows.reduce((sum, row) => sum + Number(row.manhours || 0), 0),
       };
     }
     return {
@@ -755,11 +761,13 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
     const mhMatchOk = dayData?.summary?.mh_match_ok ?? (peopleMh === null ? null : Math.abs(materialMh - peopleMh) <= 0.5);
     const attendanceMatchOk = dayData?.summary?.attendance_match_ok ?? null;
     const mismatchReasons = (dayData?.summary?.mismatch_reasons || []).filter(Boolean);
-    const warnings = (dayData?.summary?.warnings || []).filter((item) => {
+    const normalizedWarnings = (dayData?.summary?.warnings || []).filter((item) => {
       const message = String(item?.message || "").trim();
       if (!message) return false;
       return !isLegacyPeopleMismatchWarning(message);
     });
+    const directPersonnelWarning = normalizedWarnings.find((item) => String(item.code || "").trim().toLowerCase() === "direct_personnel_mismatch") || null;
+    const warnings = normalizedWarnings.filter((item) => String(item.code || "").trim().toLowerCase() !== "direct_personnel_mismatch");
     return {
       materialMh,
       peopleMh,
@@ -768,9 +776,12 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
       attendanceMatchOk,
       mismatchReasons,
       warnings,
+      directPersonnelWarning,
       isMismatch: mismatchReasons.length > 0,
     };
   }, [dayData?.summary, rows]);
+
+  const personnelColumns = useMemo(() => extractPersonnelColumns(summary.directPersonnelWarning?.details || null), [summary.directPersonnelWarning]);
 
   const exportCsv = useCallback(() => {
     const headers = [
@@ -820,9 +831,9 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
 
   if (authed === false) {
     return (
-      <Card className="border-white/20 bg-black/35 text-zinc-100">
+        <Card className="border-white/20 bg-black/35 text-zinc-100">
         <CardHeader>
-          <CardTitle>Daily Installation Follow-up</CardTitle>
+          <CardTitle>Daily Installation Report</CardTitle>
           <CardDescription className="text-zinc-300">Please sign in to view this module.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -840,7 +851,7 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
         <div className="rounded-[28px] border border-white/15 bg-[linear-gradient(180deg,#0d1119_0%,#06080e_100%)] p-4 text-zinc-100 shadow-[0_24px_50px_rgba(0,0,0,0.45)] md:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-semibold">Daily Installation Follow-up</h1>
+              <h1 className="text-2xl font-semibold">Daily Installation Report</h1>
               <p className="mt-1 text-sm text-zinc-300">Field installation ingestion, validation, and day-level follow-up.</p>
 
               <div className="mt-4 flex flex-wrap items-end gap-2">
@@ -920,6 +931,7 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
       {embedded && actionInfo ? <div className="rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-xs text-zinc-200">{actionInfo}</div> : null}
       {embedded && datesError ? <div className="rounded-lg border border-rose-300/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">{datesError}</div> : null}
       {embedded && latestImportedDate ? <div className="text-xs text-zinc-400">Last imported file date: {latestImportedDate}</div> : null}
+      {authGateError ? <div className="rounded-lg border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">{authGateError}</div> : null}
 
       <div className="grid gap-4 grid-cols-1">
         <Card className="gap-3 rounded-[28px] border border-white/15 bg-[linear-gradient(180deg,#0d1119_0%,#06080e_100%)] py-4 text-zinc-100 shadow-[0_24px_50px_rgba(0,0,0,0.45)]">
@@ -936,7 +948,7 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
               {embedded
                 ? "All installation reports from first indexed file to latest indexed file."
                 : dayData?.file
-                  ? `File: ${dayData.file.file_name}${dayData.file.revision ? ` • ${dayData.file.revision}` : ""}`
+                  ? `File: ${dayData.file.file_name}${dayData.file.revision ? ` â€¢ ${dayData.file.revision}` : ""}`
                   : "No report uploaded for this date"}
             </CardDescription>
           </CardHeader>
@@ -993,7 +1005,17 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
                       Material {formatNum(summary.materialMh)} vs Direct {formatNum(dayData.summary.direct_total_mh ?? summary.peopleMh)}
                     </div>
                   </div>
-                  <div className="rounded-lg border border-white/10 bg-black/30 p-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (summary.attendanceMatchOk === false) {
+                        setShowPersonnelMismatchDetails((prev) => !prev);
+                      }
+                    }}
+                    className={`rounded-lg border border-white/10 bg-black/30 p-2 text-left ${
+                      summary.attendanceMatchOk === false ? "transition hover:border-rose-300/35 hover:bg-rose-500/10" : ""
+                    }`}
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-xs text-zinc-300">Direct Personnel vs Attendance</div>
                       <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] ${checkBadgeClass(summary.attendanceMatchOk)}`}>
@@ -1001,8 +1023,50 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
                       </span>
                     </div>
                     <div className="mt-1 text-[11px] text-zinc-400">Installation direct names vs Daily Personal Reports (Electrical-Direct).</div>
-                  </div>
+                    {summary.attendanceMatchOk === false ? (
+                      <div className="mt-1 text-[11px] text-rose-200 underline underline-offset-2">
+                        {showPersonnelMismatchDetails ? "Hide mismatch details" : "Show mismatch details"}
+                      </div>
+                    ) : null}
+                  </button>
                 </div>
+
+                {summary.attendanceMatchOk === false && showPersonnelMismatchDetails ? (
+                  <div className="mt-3 rounded-md border border-rose-300/25 bg-rose-500/10 p-2">
+                    <div className="mb-2 text-xs text-rose-100">Personnel comparison</div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <div className="rounded-md border border-white/10 bg-black/30 p-2">
+                        <div className="text-[11px] font-medium text-zinc-200">Daily Installation Reports</div>
+                        <ul className="mt-1 space-y-1 text-xs text-zinc-200">
+                          {personnelColumns.installation.length ? (
+                            personnelColumns.installation.map((name, index) => (
+                              <li key={`inst-${name}-${index}`} className="rounded border border-white/10 bg-black/20 px-2 py-1">
+                                {name}
+                              </li>
+                            ))
+                          ) : (
+                            <li className="text-zinc-400">No names in warning payload.</li>
+                          )}
+                        </ul>
+                      </div>
+                      <div className="rounded-md border border-white/10 bg-black/30 p-2">
+                        <div className="text-[11px] font-medium text-zinc-200">Daily Personal Reports</div>
+                        <ul className="mt-1 space-y-1 text-xs text-zinc-200">
+                          {personnelColumns.personal.length ? (
+                            personnelColumns.personal.map((name, index) => (
+                              <li key={`pers-${name}-${index}`} className="rounded border border-white/10 bg-black/20 px-2 py-1">
+                                {name}
+                              </li>
+                            ))
+                          ) : (
+                            <li className="text-zinc-400">No names in warning payload.</li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                    {personnelColumns.isPartial ? <div className="mt-2 text-[11px] text-zinc-400">Legacy warning payload detected; showing available mismatch names.</div> : null}
+                  </div>
+                ) : null}
 
                 {summary.mismatchReasons.length ? (
                   <div className="mt-3">
@@ -1032,8 +1096,8 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
               </div>
             ) : null}
             <div className="grid gap-2 sm:grid-cols-2">
-              <KpiCard label={`Month Qty${monthTotals.month ? ` (${monthTotals.month})` : ""}`} value={formatNum(monthTotals.qty)} />
-              <KpiCard label={`Month Manhours${monthTotals.month ? ` (${monthTotals.month})` : ""}`} value={formatNum(monthTotals.manhours)} />
+              <KpiCard label="Total Qty" value={formatNum(monthTotals.qty)} />
+              <KpiCard label="Total Manhours" value={formatNum(monthTotals.manhours)} />
             </div>
 
             {loadingDay || loadingRange ? (
@@ -1083,36 +1147,48 @@ export default function InstallationsWorkspace({ embedded = false }: Props) {
                   </div>
 
                   <div className="overflow-x-auto rounded-xl border border-white/10">
-                    <table className="w-full min-w-[1080px] text-sm">
+                    <table className="w-full min-w-[1700px] text-sm">
                       <thead className="bg-black/40 text-xs uppercase tracking-[0.08em] text-zinc-400">
                         <tr>
+                          <th className="px-3 py-2 text-right">No</th>
                           <th className="px-3 py-2 text-left">Date</th>
+                          <th className="px-3 py-2 text-left">M/D</th>
+                          <th className="px-3 py-2 text-left">Location</th>
                           <th className="px-3 py-2 text-left">Zone</th>
                           <th className="px-3 py-2 text-center">Floor</th>
+                          <th className="px-3 py-2 text-center">Elevation</th>
+                          <th className="px-3 py-2 text-center">Team</th>
                           <th className="px-3 py-2 text-left">Budget</th>
                           <th className="px-3 py-2 text-center">Activity</th>
                           <th className="px-3 py-2 text-left">Description</th>
                           <th className="px-3 py-2 text-left">Unit</th>
                           <th className="px-3 py-2 text-right">Qty</th>
-                          <th className="px-3 py-2 text-center">Mh</th>
+                          <th className="px-3 py-2 text-right">Mh</th>
                           <th className="px-3 py-2 text-center">Project Name</th>
                           <th className="px-3 py-2 text-center">Orientation</th>
+                          <th className="px-3 py-2 text-left">Comment</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredRows.map((row) => (
                           <tr key={row.id} className="border-t border-white/10">
+                            <td className="px-3 py-2 text-right">{row.row_no ?? "-"}</td>
                             <td className="px-3 py-2">{row.work_date ? formatDateLabel(row.work_date) : "-"}</td>
+                            <td className="px-3 py-2">{row.install_action || "-"}</td>
+                            <td className="px-3 py-2">{row.location || "-"}</td>
                             <td className="px-3 py-2">{row.zone || "-"}</td>
                             <td className="px-3 py-2 text-center">{row.floor || "-"}</td>
+                            <td className="px-3 py-2 text-center">{row.elevation || "-"}</td>
+                            <td className="px-3 py-2 text-center">{row.team_no ?? "-"}</td>
                             <td className="px-3 py-2">{row.budget_code || "-"}</td>
                             <td className="px-3 py-2 text-center">{row.activity_code || "-"}</td>
                             <td className="px-3 py-2">{row.description || "-"}</td>
                             <td className="px-3 py-2">{row.unit || "-"}</td>
                             <td className="px-3 py-2 text-right">{formatNum(row.qty)}</td>
-                            <td className="px-3 py-2 text-center">{formatNum(row.manhours)}</td>
+                            <td className="px-3 py-2 text-right">{formatNum(row.manhours)}</td>
                             <td className="px-3 py-2 text-center">{displayProjectName(row.project_name)}</td>
                             <td className="px-3 py-2 text-center">{row.orientation || "-"}</td>
+                            <td className="px-3 py-2">{row.comment || "-"}</td>
                           </tr>
                         ))}
                       </tbody>

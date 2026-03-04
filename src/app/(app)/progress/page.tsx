@@ -25,7 +25,7 @@ export default function ProgressPage() {
             value="daily-installation"
             className="data-[state=active]:bg-zinc-100/95 data-[state=active]:text-zinc-900"
           >
-            Daily Installation Follow-up
+            Installation Follow-up
           </TabsTrigger>
         </TabsList>
 

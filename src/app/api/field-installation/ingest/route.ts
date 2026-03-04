@@ -2,13 +2,14 @@ import { z } from "zod";
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { importFieldInstallationDay } from "@/lib/field-installation/import-job";
+import { importFieldInstallationSourceFile } from "@/lib/field-installation/import-job";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BodySchema = z.object({
   fileId: z.string().uuid(),
+  force: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -42,15 +43,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "File metadata not found." }, { status: 404 });
     }
 
-    const result = await importFieldInstallationDay({
+    const result = await importFieldInstallationSourceFile({
       admin,
-      projectCode: fileRes.data.project_code,
-      workDate: fileRes.data.work_date,
+      fileId: fileRes.data.id,
+      force: parsed.data.force ?? false,
     });
 
     return NextResponse.json({
       ok: true,
-      insertedRows: result.parsedMaterialRows,
+      insertedRows: result.insertedMaterialRows,
+      parsedRows: result.parsedMaterialRows,
+      insertedLaborRows: result.insertedLaborRows,
+      ingestStatus: result.ingestStatus,
+      distinctRowDates: result.distinctRowDates,
       summary: {
         material_total_mh: result.mh_material,
         people_total_mh: result.mh_direct,
