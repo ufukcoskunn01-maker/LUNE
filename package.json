@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@netlify/plugin-nextjs": "^5.15.8",
     "@supabase/supabase-js": "^2.39.3",
     "clsx": "^2.1.0",
     "lucide-react": "^0.312.0",
