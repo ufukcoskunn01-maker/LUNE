@@ -1,0 +1,1023 @@
+@font-face {
+  font-family: "SuisseIntlLocal";
+  src: url("/homepage/assets/aHR0cHM6-68be902df135e6113e47d3db_SuisseIntl-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SuisseIntlLocal";
+  src: url("/homepage/assets/aHR0cHM6-68be902d5f740a290c36247a_SuisseIntl-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "SuisseIntlLocal";
+  src: url("/homepage/assets/aHR0cHM6-68be902db354943c23cc820e_SuisseIntl-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.shell {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background: #050505;
+  color: #f8f6f2;
+  font-family: "SuisseIntlLocal", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #050505;
+  border-bottom: 1px solid #151515;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px 10px;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.circleButton,
+.squareButton,
+.tab,
+.comparePill,
+.segmentTab,
+.fullWidthButton {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  cursor: pointer;
+  appearance: none;
+}
+
+.circleButton {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.circleButtonBordered {
+  border-color: rgba(255, 255, 255, 0.52);
+  background: transparent;
+}
+
+.circleButtonFilled {
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.circleButton svg,
+.squareButton svg,
+.comparePill svg,
+.transactionState svg,
+.categoryIcon svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+}
+
+.circleButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.circleButtonFilled svg,
+.squareButtonAccent svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.tabs {
+  display: flex;
+  gap: 12px;
+  padding: 0 18px 12px;
+  overflow-x: auto;
+}
+
+.tab {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tabActive {
+  background: #121316;
+  color: #fff;
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.board {
+  width: min(100%, 1128px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 251px;
+  gap: 18px;
+  padding: 18px 16px 28px;
+}
+
+.primaryColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.card {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(12, 12, 13, 0.98), rgba(10, 10, 11, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.heroCard {
+  padding: 16px 0 14px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 18px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cardEyebrow {
+  color: rgba(233, 226, 212, 0.72);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+}
+
+.cardTitleWrap {
+  display: flex;
+  align-items: center;
+}
+
+.cardTitleInline {
+  padding: 0;
+}
+
+.cardChevron {
+  display: inline-block;
+  margin-left: 6px;
+  color: rgba(233, 226, 212, 0.52);
+  font-size: 11px;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.squareButton {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.squareButtonAccent {
+  color: #8b7cff;
+}
+
+.heroContent {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 18px 10px;
+}
+
+.heroTotals {
+  display: grid;
+  gap: 4px;
+}
+
+.heroAmount {
+  font-size: 27px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.heroLegend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+}
+
+.heroDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #149cff;
+}
+
+.comparePill {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 12px;
+}
+
+.compareLabel {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.comparePill svg {
+  width: 14px;
+  height: 14px;
+}
+
+.heroChart {
+  width: 100%;
+  height: 258px;
+  display: block;
+}
+
+.axisRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 0 52px 6px 52px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+}
+
+.axisRow span:last-child {
+  text-align: right;
+}
+
+.middleGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.transactionsCard,
+.upcomingCard,
+.categoryCard,
+.incomeCard {
+  overflow: hidden;
+}
+
+.transactionsCard {
+  min-height: 232px;
+}
+
+.transactionList {
+  display: grid;
+  gap: 18px;
+  padding: 18px 14px 14px;
+}
+
+.transactionRow {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.transactionIcon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f19a2c;
+  color: #fff;
+}
+
+.transactionIconPositive {
+  background: #c5f2c1;
+  color: #2c7e43;
+}
+
+.transactionRow:nth-child(2) .transactionIcon,
+.transactionRow:nth-child(4) .transactionIcon,
+.transactionRow:nth-child(5) .transactionIcon {
+  background: #756eff;
+}
+
+.transactionMeta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.transactionMeta span {
+  font-size: 13px;
+}
+
+.transactionMeta small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+}
+
+.transactionNameMuted {
+  color: rgba(255, 255, 255, 0.46);
+}
+
+.transactionTrail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.transactionState {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.26);
+}
+
+.transactionState svg {
+  width: 14px;
+  height: 14px;
+}
+
+.transactionAmount {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+.transactionAmountMuted {
+  color: rgba(255, 255, 255, 0.24);
+}
+
+.transactionAmountPositive {
+  color: #00d67d;
+}
+
+.upcomingCard .cardHeader {
+  padding-bottom: 12px;
+}
+
+.calendarHeader {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  padding: 12px 14px 10px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin: 0 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.calendarCell {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.calendarCell:nth-child(7n) {
+  border-right: 0;
+}
+
+.calendarCell:nth-last-child(-n + 7) {
+  border-bottom: 0;
+}
+
+.calendarCellMuted {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.calendarCellStriped {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.03) 75%, transparent 75%, transparent),
+    rgba(255, 255, 255, 0.015);
+  background-size: 8px 8px;
+}
+
+.calendarDay {
+  font-size: 11px;
+}
+
+.calendarBadges {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 44px;
+}
+
+.badge,
+.ringBadge {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+}
+
+.ringBadge {
+  border: 2px solid rgba(255, 255, 255, 0.95);
+}
+
+.badgeGray {
+  background: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.badgeWhite {
+  border: 2px solid rgba(255, 255, 255, 0.95);
+}
+
+.badgeRed {
+  background: #f0280f;
+  color: #fff;
+}
+
+.badgeCount {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.badgeGoogle {
+  background: #fff;
+  color: #4285f4;
+}
+
+.googleGlyph {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.calendarAmount {
+  margin-top: auto;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 11px;
+}
+
+.reportsCard {
+  padding-bottom: 12px;
+}
+
+.reportMeta {
+  display: grid;
+  gap: 2px;
+  padding: 12px 18px 0;
+}
+
+.reportMeta span {
+  font-size: 21px;
+  font-weight: 500;
+}
+
+.reportMeta small {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+}
+
+.reportToolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 18px 12px;
+}
+
+.sankey {
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr) 174px;
+  gap: 8px;
+  align-items: stretch;
+  padding: 0 12px;
+}
+
+.sankeyColumn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 208px;
+}
+
+.sankeyColumn::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 999px;
+}
+
+.sankeyLeft::before {
+  left: 0;
+  background: linear-gradient(180deg, #d9ece6 0 48%, #00d38b 48% 100%);
+}
+
+.sankeyRight::before {
+  right: 0;
+  background: linear-gradient(180deg, #7c6fff 0 28%, #c77145 28% 54%, #a68a1b 54% 82%, #d98ae2 82% 100%);
+}
+
+.sankeyNode {
+  padding: 32px 10px 20px 16px;
+  font-size: 12px;
+}
+
+.sankeyNode span,
+.sankeyNode strong {
+  display: block;
+}
+
+.sankeyNode span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.sankeyNode strong {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.sankeyRight .sankeyNode {
+  padding-right: 16px;
+  text-align: right;
+}
+
+.sankeyNodePurple {
+  padding-top: 20px;
+}
+
+.sankeyNodePink {
+  min-height: 12px;
+}
+
+.sankeyFlows {
+  width: 100%;
+  height: 208px;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 14px 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 14px;
+}
+
+.statBlock {
+  padding: 12px 16px;
+  text-align: center;
+}
+
+.statBlock + .statBlock {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.statBlock span {
+  display: block;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+}
+
+.statBlock strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.categoryCard {
+  padding-bottom: 12px;
+}
+
+.segmentTabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 10px 10px 0;
+}
+
+.segmentTab {
+  position: relative;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.segmentTabActive {
+  color: #fff;
+}
+
+.segmentTabActive::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.ringWrap {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 10px auto 0;
+}
+
+.ringChart {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-86deg);
+}
+
+.ringTrack {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 6;
+}
+
+.ringSegment {
+  transform-origin: center;
+}
+
+.ringCenter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.ringCenter strong {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.ringCenter span {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+}
+
+.categoryList {
+  margin: 14px 10px 0;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.categoryRow {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.categoryRow + .categoryRow {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.categoryIcon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--swatch);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.categoryMeta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.categoryMeta span {
+  font-size: 12px;
+}
+
+.categoryMeta small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+}
+
+.categoryAmount {
+  font-size: 12px;
+}
+
+.fullWidthButton {
+  width: calc(100% - 20px);
+  height: 47px;
+  margin: 18px 10px 0;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.21);
+  background: rgba(255, 255, 255, 0.01);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.incomeCard {
+  padding-bottom: 12px;
+}
+
+.incomeSection {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 14px 0;
+}
+
+.incomeSection + .incomeSection {
+  margin-top: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.incomeLabel {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 11px;
+}
+
+.incomeMonth {
+  margin-top: 6px;
+  font-size: 21px;
+  font-weight: 500;
+}
+
+.incomeValue {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.incomeRows {
+  display: grid;
+  gap: 8px;
+}
+
+.incomeRow {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.incomeRow strong {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.incomeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.incomeDotBlue {
+  background: #736dff;
+}
+
+.incomeDotOrange {
+  background: #f5a230;
+}
+
+.incomeFooter {
+  padding: 16px 14px 4px;
+}
+
+.incomeFooterRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.incomeFooterRow strong {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.progressTrack {
+  display: flex;
+  gap: 4px;
+  height: 5px;
+  margin-top: 10px;
+}
+
+.progressFillWarm,
+.progressFillCool {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.progressFillWarm {
+  width: 66%;
+  background: #ecd5ae;
+}
+
+.progressFillCool {
+  flex: 1;
+  background: #7d73ff;
+}
+
+@media (max-width: 1100px) {
+  .shell {
+    flex-direction: column;
+  }
+
+  .main {
+    min-height: 0;
+  }
+
+  .board {
+    grid-template-columns: 1fr;
+  }
+
+  .sideColumn {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+@media (max-width: 820px) {
+  .headerRow {
+    padding: 12px 14px 10px;
+  }
+
+  .tabs {
+    padding: 0 14px 10px;
+  }
+
+  .board {
+    padding: 14px 10px 22px;
+  }
+
+  .middleGrid,
+  .sideColumn,
+  .statGrid,
+  .sankey {
+    grid-template-columns: 1fr;
+  }
+
+  .heroContent {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .heroChart {
+    height: 220px;
+  }
+
+  .axisRow {
+    padding: 0 28px 6px;
+  }
+
+  .sankey {
+    gap: 14px;
+  }
+
+  .sankeyColumn::before {
+    display: none;
+  }
+
+  .sankeyFlows {
+    height: 160px;
+  }
+
+  .statBlock + .statBlock {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+@media (max-width: 560px) {
+  .topActions {
+    gap: 8px;
+  }
+
+  .pageTitle {
+    font-size: 17px;
+  }
+
+  .tabs {
+    gap: 8px;
+  }
+
+  .board {
+    padding-inline: 6px;
+  }
+
+  .cardHeader,
+  .heroContent {
+    padding-inline: 12px;
+  }
+
+  .calendarHeader {
+    padding-inline: 8px;
+    font-size: 10px;
+  }
+
+  .calendarGrid {
+    margin-inline: 6px;
+  }
+
+  .calendarCell {
+    min-height: 96px;
+    gap: 8px;
+    padding-inline: 2px;
+  }
+
+  .categoryList,
+  .fullWidthButton {
+    margin-inline: 8px;
+  }
+
+  .ringWrap {
+    width: 196px;
+    height: 196px;
+  }
+}
