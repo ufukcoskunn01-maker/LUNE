@@ -1,0 +1,17 @@
+<svg width="160" height="92" viewBox="0 0 160 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path
+    d="M8 46C18 17 61 19 95 36C109 43 118 49 126 53C136 59 144 58 149 49C154 40 146 30 135 34C123 39 113 49 101 62C88 76 74 87 63 83C54 80 53 67 58 58C62 50 61 43 50 38C35 31 19 32 8 46Z"
+    stroke="#FFFFFF"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.45"
+  />
+  <path
+    d="M8 46C18 17 61 19 95 36C109 43 118 49 126 53C136 59 144 58 149 49C154 40 146 30 135 34C123 39 113 49 101 62C88 76 74 87 63 83C54 80 53 67 58 58C62 50 61 43 50 38C35 31 19 32 8 46Z"
+    stroke="#FFFFFF"
+    stroke-width="6.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
