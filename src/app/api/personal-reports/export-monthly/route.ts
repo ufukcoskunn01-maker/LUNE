@@ -1,4 +1,4 @@
-import { exportPersonalReportsMonthlyCsv } from "@/lib/personal-reports";
+import { exportPersonalReportsMonthlyWorkbook } from "@/lib/personal-reports-export";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,11 +17,11 @@ export async function GET(request: Request) {
       return Response.json({ ok: false, error: "month must be in YYYY-MM format." }, { status: 400 });
     }
 
-    const result = await exportPersonalReportsMonthlyCsv(projectCode, month);
+    const result = await exportPersonalReportsMonthlyWorkbook(projectCode, month);
 
-    return new Response(result.content, {
+    return new Response(new Uint8Array(result.content), {
       headers: {
-        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Type": result.contentType,
         "Content-Disposition": `attachment; filename=\"${result.fileName}\"`,
         "Cache-Control": "no-store",
       },

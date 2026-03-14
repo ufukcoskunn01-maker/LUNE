@@ -5,6 +5,7 @@ export type MonthlyAttendanceRecord = {
   status: string | null;
   segment: string | null;
   discipline: string | null;
+  company?: string | null;
   hours?: number | null;
 };
 
@@ -14,6 +15,7 @@ export type SegmentBucket = "Indirect" | "Direct" | "Mobilization";
 export type MonthlyHoursRow = {
   employee_id: string;
   full_name: string;
+  company: string;
   discipline: DisciplineBucket;
   segment: SegmentBucket;
   days: Record<string, number | null>;
@@ -138,6 +140,7 @@ export function buildMonthlyHoursRows(records: MonthlyAttendanceRecord[], month?
     {
       employee_id: string;
       full_name: string;
+      company: string;
       discipline: DisciplineBucket;
       segment: SegmentBucket;
       hoursByDay: Map<string, number>;
@@ -146,7 +149,6 @@ export function buildMonthlyHoursRows(records: MonthlyAttendanceRecord[], month?
 
   for (const record of records) {
     const employeeId = safeTrim(record.employee_id);
-    if (!employeeId) continue;
     if (!isPresentStatus(record.status)) continue;
 
     const workDate = safeTrim(record.work_date);
@@ -157,14 +159,19 @@ export function buildMonthlyHoursRows(records: MonthlyAttendanceRecord[], month?
     const discipline = normalizeDiscipline(record.discipline);
     const segment = normalizeSegment(record.segment);
     const fullName = safeTrim(record.full_name) || employeeId;
+    if (!fullName) continue;
+    const company = safeTrim(record.company);
     const hours = resolveHours(record);
-    const key = `${employeeId}__${discipline}__${segment}`;
+    const key = employeeId
+      ? `id:${employeeId}__${discipline}__${segment}`
+      : `name:${fullName.toLocaleLowerCase()}__${company.toLocaleLowerCase()}__${discipline}__${segment}`;
 
     let current = byEmployeeGroup.get(key);
     if (!current) {
       current = {
         employee_id: employeeId,
         full_name: fullName,
+        company,
         discipline,
         segment,
         hoursByDay: new Map<string, number>(),
@@ -189,6 +196,7 @@ export function buildMonthlyHoursRows(records: MonthlyAttendanceRecord[], month?
       return {
         employee_id: entry.employee_id,
         full_name: entry.full_name,
+        company: entry.company,
         discipline: entry.discipline,
         segment: entry.segment,
         days,

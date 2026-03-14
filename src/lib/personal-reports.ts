@@ -1,4 +1,4 @@
-import { buildMonthlyHoursRows, monthRange, type MonthlyAttendanceRecord } from "@/lib/attendance-monthly-hours";
+import { monthRange } from "@/lib/attendance-monthly-hours";
 
 export const DEFAULT_PROJECT_CODE = "A27";
 
@@ -9,7 +9,8 @@ export type ReportDiscipline = "Electrical" | "Mechanical" | "Shared";
 export type ReportDisciplineOrTotal = ReportDiscipline | "Total";
 
 export type PersonalReportRow = {
-  employeeId: string;
+  rowKey: string;
+  employeeId: string | null;
   fullName: string;
   company: string | null;
   segment: ReportSegment;
@@ -54,24 +55,21 @@ export type PersonalReportsData = {
   monthlyPoints: MonthlyPersonnelPoint[];
 };
 
-type AttendanceReportPointerRow = {
+type AttendanceActiveRow = {
+  id: string;
   project_code: string;
   report_date: string;
-  active_file_id: string;
-};
-
-type AttendanceDailySnapshotRow = {
   source_file_id: string;
+  source_row_no: number | null;
   employee_id: string | null;
   full_name: string | null;
   company: string | null;
-  section_title: string | null;
-  discipline_group: string | null;
-  discipline_code: string | null;
-  profession_group: string | null;
+  segment: string | null;
+  discipline: string | null;
+  profession_actual: string | null;
+  profession_official: string | null;
   status: string | null;
   absence_reason: string | null;
-  is_mobilization: boolean | null;
 };
 
 const SEGMENTS: ReportSegment[] = ["Indirect", "Direct", "Mobilization"];
@@ -84,7 +82,10 @@ function requireEnv(name: string, value: string | undefined): string {
 }
 
 function getSupabaseRestConfig() {
-  const url = requireEnv("SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL", process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const url = requireEnv(
+    "SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL",
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  );
   const serviceKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY);
   return { url, serviceKey };
 }
@@ -112,25 +113,15 @@ async function supabaseGet<T>(path: string, searchParams: URLSearchParams): Prom
   return (await response.json()) as T[];
 }
 
-function createCounts(): PatCounts {
-  return { present: 0, absent: 0, total: 0 };
-}
-
-function createSummaryMatrix(): SummaryMatrix {
-  return {
-    Indirect: { Electrical: createCounts(), Mechanical: createCounts(), Shared: createCounts(), Total: createCounts() },
-    Direct: { Electrical: createCounts(), Mechanical: createCounts(), Shared: createCounts(), Total: createCounts() },
-    Mobilization: { Electrical: createCounts(), Mechanical: createCounts(), Shared: createCounts(), Total: createCounts() },
-  };
-}
-
 function normalizeIsoDate(value: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+
   const [yearPart, monthPart, dayPart] = value.split("-");
   const year = Number(yearPart);
   const month = Number(monthPart);
   const day = Number(dayPart);
   const date = new Date(Date.UTC(year, month - 1, day));
+
   if (
     Number.isNaN(date.getTime()) ||
     date.getUTCFullYear() !== year ||
@@ -139,12 +130,15 @@ function normalizeIsoDate(value: string): string | null {
   ) {
     return null;
   }
+
   return value;
 }
 
 export function resolveReportDate(rawDate?: string): string {
   const today = new Date();
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
+    today.getDate()
+  ).padStart(2, "0")}`;
   return rawDate && normalizeIsoDate(rawDate) ? rawDate : todayIso;
 }
 
@@ -174,9 +168,9 @@ function txt(value: unknown): string {
 }
 
 function normalizeStatus(value: unknown): AttendanceStatus {
-  const normalized = txt(value).toLowerCase();
-  if (normalized === "present" || normalized === "p" || normalized === "worked" || normalized === "attended") return "Present";
-  if (normalized === "absent" || normalized === "a") return "Absent";
+  const s = txt(value).toLowerCase();
+  if (s === "present" || s === "p" || s === "worked" || s === "attended") return "Present";
+  if (s === "absent" || s === "a") return "Absent";
   return "Unknown";
 }
 
@@ -186,85 +180,69 @@ function toPat(status: AttendanceStatus): PatCode {
   return "U";
 }
 
-function bestProfession(row: PersonalReportRow): string {
-  return row.professionOfficial || row.professionActual || "Unassigned";
-}
-
-function inferSegmentFromSnapshot(row: AttendanceDailySnapshotRow): ReportSegment {
-  if (row.is_mobilization) return "Mobilization";
-  const section = txt(row.section_title).toLowerCase();
-  if (section.includes("итр")) return "Indirect";
-  if (section.includes("команд")) return "Direct";
+function coerceSegment(raw: string | null | undefined): ReportSegment {
+  const s = txt(raw);
+  if (s === "Direct" || s === "Mobilization" || s === "Indirect") return s;
   return "Indirect";
 }
 
-function inferDisciplineFromSnapshot(row: AttendanceDailySnapshotRow): ReportDiscipline {
-  const code = txt(row.discipline_code).toLowerCase();
-  if (code === "э" || code === "e") return "Electrical";
-  if (code === "м" || code === "m") return "Mechanical";
-
-  const group = txt(row.discipline_group).toLowerCase();
-  if (group.includes("эом") || group.includes("cc") || group.includes("сс") || group.includes("elect")) return "Electrical";
-  if (group.includes("ов") || group.includes("вк") || group.includes("вис") || group.includes("mech")) return "Mechanical";
+function coerceDiscipline(raw: string | null | undefined): ReportDiscipline {
+  const s = txt(raw);
+  if (s === "Electrical" || s === "Mechanical" || s === "Shared") return s;
   return "Shared";
 }
 
-async function fetchActiveReport(projectCode: string, date: string): Promise<AttendanceReportPointerRow | null> {
-  const rows = await supabaseGet<AttendanceReportPointerRow>(
-    "attendance_reports",
-    new URLSearchParams({
-      select: "project_code,report_date,active_file_id",
+function createCounts(): PatCounts {
+  return { present: 0, absent: 0, total: 0 };
+}
+
+function createSummaryMatrix(): SummaryMatrix {
+  return {
+    Indirect: { Electrical: createCounts(), Mechanical: createCounts(), Shared: createCounts(), Total: createCounts() },
+    Direct: { Electrical: createCounts(), Mechanical: createCounts(), Shared: createCounts(), Total: createCounts() },
+    Mobilization: {
+      Electrical: createCounts(),
+      Mechanical: createCounts(),
+      Shared: createCounts(),
+      Total: createCounts(),
+    },
+  };
+}
+
+function bestProfession(row: PersonalReportRow): string {
+  return row.professionActual || row.professionOfficial || "Unassigned";
+}
+
+async function fetchActiveRowsForDate(projectCode: string, date: string): Promise<AttendanceActiveRow[]> {
+  const pageSize = 1000;
+  const rows: AttendanceActiveRow[] = [];
+
+  for (let offset = 0; ; offset += pageSize) {
+    const searchParams = new URLSearchParams({
+      select: [
+        "project_code",
+        "report_date",
+        "id",
+        "source_file_id",
+        "source_row_no",
+        "employee_id",
+        "full_name",
+        "company",
+        "segment",
+        "discipline",
+        "profession_actual",
+        "profession_official",
+        "status",
+        "absence_reason",
+      ].join(","),
       project_code: `eq.${projectCode}`,
       report_date: `eq.${date}`,
-      limit: "1",
-    })
-  );
-  return rows[0] ?? null;
-}
-
-async function fetchMonthReportPointers(projectCode: string, month: string): Promise<AttendanceReportPointerRow[]> {
-  const range = monthRange(month);
-  if (!range) throw new Error("Invalid month");
-
-  const pageSize = 1000;
-  const rows: AttendanceReportPointerRow[] = [];
-
-  for (let offset = 0; ; offset += pageSize) {
-    const searchParams = new URLSearchParams({
-      select: "project_code,report_date,active_file_id",
-      project_code: `eq.${projectCode}`,
-      report_date: `gte.${range.start}`,
-      order: "report_date.asc",
-      limit: String(pageSize),
-      offset: String(offset),
-    });
-    searchParams.append("report_date", `lte.${range.end}`);
-
-    const batch = await supabaseGet<AttendanceReportPointerRow>("attendance_reports", searchParams);
-    rows.push(...batch);
-    if (batch.length < pageSize) break;
-  }
-
-  return rows;
-}
-
-async function fetchSnapshotRowsBySourceFiles(sourceFileIds: string[]): Promise<AttendanceDailySnapshotRow[]> {
-  if (!sourceFileIds.length) return [];
-
-  const pageSize = 1000;
-  const rows: AttendanceDailySnapshotRow[] = [];
-  const inList = `in.(${sourceFileIds.join(",")})`;
-
-  for (let offset = 0; ; offset += pageSize) {
-    const searchParams = new URLSearchParams({
-      select: "source_file_id,employee_id,full_name,company,section_title,discipline_group,discipline_code,profession_group,status,absence_reason,is_mobilization",
-      source_file_id: inList,
       order: "full_name.asc.nullslast,employee_id.asc.nullslast",
       limit: String(pageSize),
       offset: String(offset),
     });
 
-    const batch = await supabaseGet<AttendanceDailySnapshotRow>("attendance_daily_rows", searchParams);
+    const batch = await supabaseGet<AttendanceActiveRow>("attendance_active_rows", searchParams);
     rows.push(...batch);
     if (batch.length < pageSize) break;
   }
@@ -272,36 +250,80 @@ async function fetchSnapshotRowsBySourceFiles(sourceFileIds: string[]): Promise<
   return rows;
 }
 
-function normalizeRows(rawRows: AttendanceDailySnapshotRow[]): PersonalReportRow[] {
+async function fetchActiveRowsForMonth(projectCode: string, month: string): Promise<AttendanceActiveRow[]> {
+  const range = monthRange(month);
+  if (!range) throw new Error("Invalid month");
+
+  const pageSize = 1000;
+  const rows: AttendanceActiveRow[] = [];
+
+  for (let offset = 0; ; offset += pageSize) {
+    const searchParams = new URLSearchParams({
+      select: [
+        "project_code",
+        "report_date",
+        "id",
+        "source_file_id",
+        "source_row_no",
+        "employee_id",
+        "full_name",
+        "company",
+        "segment",
+        "discipline",
+        "profession_actual",
+        "profession_official",
+        "status",
+        "absence_reason",
+      ].join(","),
+      project_code: `eq.${projectCode}`,
+      report_date: `gte.${range.start}`,
+      order: "report_date.asc,full_name.asc.nullslast,employee_id.asc.nullslast",
+      limit: String(pageSize),
+      offset: String(offset),
+    });
+    searchParams.append("report_date", `lte.${range.end}`);
+
+    const batch = await supabaseGet<AttendanceActiveRow>("attendance_active_rows", searchParams);
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+  }
+
+  return rows;
+}
+
+function normalizeRows(rawRows: AttendanceActiveRow[]): PersonalReportRow[] {
   const normalized = rawRows.flatMap((row) => {
-      const employeeId = txt(row.employee_id);
-      const fullName = txt(row.full_name) || employeeId;
-      if (!employeeId || !fullName) return [];
+    const employeeId = txt(row.employee_id) || null;
+    const fullName = txt(row.full_name);
+    if (!fullName) return [];
 
-      const status = normalizeStatus(row.status);
+    const status = normalizeStatus(row.status);
+    const rowKey = row.id || `${row.source_file_id}:${row.source_row_no ?? "na"}:${employeeId ?? fullName}`;
 
-      const normalizedRow: PersonalReportRow = {
+    return [
+      {
+        rowKey,
         employeeId,
         fullName,
         company: txt(row.company) || null,
-        segment: inferSegmentFromSnapshot(row),
-        discipline: inferDisciplineFromSnapshot(row),
+        segment: coerceSegment(row.segment),
+        discipline: coerceDiscipline(row.discipline),
         status,
         pat: toPat(status),
         absenceReason: txt(row.absence_reason) || null,
-        professionActual: txt(row.profession_group) || null,
-        professionOfficial: null,
-      };
-
-      return [normalizedRow];
-    });
+        professionActual: txt(row.profession_actual) || null,
+        professionOfficial: txt(row.profession_official) || null,
+      },
+    ];
+  });
 
   return normalized.sort(
-    (left, right) =>
-      left.segment.localeCompare(right.segment) ||
-      left.discipline.localeCompare(right.discipline) ||
-      left.fullName.localeCompare(right.fullName) ||
-      left.employeeId.localeCompare(right.employeeId)
+    (a, b) =>
+      a.segment.localeCompare(b.segment) ||
+      a.discipline.localeCompare(b.discipline) ||
+      a.fullName.localeCompare(b.fullName) ||
+      (a.employeeId ?? "").localeCompare(b.employeeId ?? "") ||
+      a.rowKey.localeCompare(b.rowKey)
   );
 }
 
@@ -315,17 +337,26 @@ function buildSummaryMatrix(rows: PersonalReportRow[]) {
   };
 
   for (const row of rows) {
-    const segmentCell = summaryMatrix[row.segment][row.discipline];
-    if (row.status === "Present") segmentCell.present += 1;
-    if (row.status === "Absent") segmentCell.absent += 1;
-    segmentCell.total += 1;
+    const cell = summaryMatrix[row.segment][row.discipline];
+    if (row.status === "Present") cell.present += 1;
+    if (row.status === "Absent") cell.absent += 1;
+    cell.total += 1;
   }
 
   for (const segment of SEGMENTS) {
     summaryMatrix[segment].Total = {
-      present: summaryMatrix[segment].Electrical.present + summaryMatrix[segment].Mechanical.present + summaryMatrix[segment].Shared.present,
-      absent: summaryMatrix[segment].Electrical.absent + summaryMatrix[segment].Mechanical.absent + summaryMatrix[segment].Shared.absent,
-      total: summaryMatrix[segment].Electrical.total + summaryMatrix[segment].Mechanical.total + summaryMatrix[segment].Shared.total,
+      present:
+        summaryMatrix[segment].Electrical.present +
+        summaryMatrix[segment].Mechanical.present +
+        summaryMatrix[segment].Shared.present,
+      absent:
+        summaryMatrix[segment].Electrical.absent +
+        summaryMatrix[segment].Mechanical.absent +
+        summaryMatrix[segment].Shared.absent,
+      total:
+        summaryMatrix[segment].Electrical.total +
+        summaryMatrix[segment].Mechanical.total +
+        summaryMatrix[segment].Shared.total,
     };
   }
 
@@ -363,92 +394,55 @@ function buildPivotRows(rows: PersonalReportRow[]): PivotRow[] {
   }
 
   return Array.from(pivotMap.values())
-    .map((value) => ({
-      profession: value.profession,
-      companyCount: value.companyCount,
-      present: value.present,
-      absent: value.absent,
-      total: value.total,
+    .map(({ profession, companyCount, present, absent, total }) => ({
+      profession,
+      companyCount,
+      present,
+      absent,
+      total,
     }))
-    .sort((left, right) => right.total - left.total || left.profession.localeCompare(right.profession));
+    .sort((a, b) => b.total - a.total || a.profession.localeCompare(b.profession));
 }
 
-function buildMonthlyPersonnelPoints(
-  pointers: AttendanceReportPointerRow[],
-  rowsBySourceFile: Map<string, AttendanceDailySnapshotRow[]>,
-  month: string
-): MonthlyPersonnelPoint[] {
+function buildMonthlyPersonnelPoints(rows: AttendanceActiveRow[], month: string): MonthlyPersonnelPoint[] {
   const range = monthRange(month);
   const lastDay = Number(range?.end.slice(8, 10) || "0");
-  const points = Array.from({ length: lastDay }, (_, index) => ({
-    date: `${month}-${String(index + 1).padStart(2, "0")}`,
-    day: index + 1,
+
+  const points = Array.from({ length: lastDay }, (_, i) => ({
+    date: `${month}-${String(i + 1).padStart(2, "0")}`,
+    day: i + 1,
     present: 0,
     absent: 0,
     total: 0,
   }));
 
-  for (const pointer of pointers) {
-    const day = Number(pointer.report_date.slice(8, 10));
+  for (const row of rows) {
+    const reportDate = txt(row.report_date);
+    const day = Number(reportDate.slice(8, 10));
     if (!Number.isInteger(day) || day < 1 || day > points.length) continue;
-    const point = points[day - 1];
-    const rows = rowsBySourceFile.get(pointer.active_file_id) ?? [];
 
-    for (const row of rows) {
-      const status = normalizeStatus(row.status);
-      if (status === "Present") point.present += 1;
-      if (status === "Absent") point.absent += 1;
-      point.total += 1;
-    }
+    const point = points[day - 1];
+    const status = normalizeStatus(row.status);
+    if (status === "Present") point.present += 1;
+    if (status === "Absent") point.absent += 1;
+    point.total += 1;
   }
 
   return points;
 }
 
-function toMonthlyAttendanceRecord(row: AttendanceDailySnapshotRow, reportDate: string): MonthlyAttendanceRecord | null {
-  const employeeId = txt(row.employee_id);
-  const fullName = txt(row.full_name);
-  if (!employeeId || !fullName) return null;
-
-  return {
-    employee_id: employeeId,
-    full_name: fullName,
-    work_date: reportDate,
-    status: txt(row.status) || null,
-    segment: inferSegmentFromSnapshot(row),
-    discipline: inferDisciplineFromSnapshot(row),
-  };
-}
-
 export async function getPersonalReportsData(projectCode: string, date: string): Promise<PersonalReportsData> {
   const month = monthTokenFromDate(date);
-  const [selectedPointer, monthPointers] = await Promise.all([
-    fetchActiveReport(projectCode, date),
-    fetchMonthReportPointers(projectCode, month),
+
+  const [selectedRaw, monthRaw] = await Promise.all([
+    fetchActiveRowsForDate(projectCode, date),
+    fetchActiveRowsForMonth(projectCode, month),
   ]);
 
-  const sourceFileIds = Array.from(
-    new Set(
-      [selectedPointer?.active_file_id, ...monthPointers.map((pointer) => pointer.active_file_id)].filter(
-        (value): value is string => Boolean(value)
-      )
-    )
-  );
-
-  const allSnapshotRows = await fetchSnapshotRowsBySourceFiles(sourceFileIds);
-  const rowsBySourceFile = new Map<string, AttendanceDailySnapshotRow[]>();
-
-  for (const row of allSnapshotRows) {
-    const current = rowsBySourceFile.get(row.source_file_id) ?? [];
-    current.push(row);
-    rowsBySourceFile.set(row.source_file_id, current);
-  }
-
-  const selectedRows = selectedPointer ? rowsBySourceFile.get(selectedPointer.active_file_id) ?? [] : [];
-  const rows = normalizeRows(selectedRows);
+  const rows = normalizeRows(selectedRaw);
   const { summaryMatrix, disciplineTotals } = buildSummaryMatrix(rows);
   const pivotRows = buildPivotRows(rows);
-  const monthlyPoints = buildMonthlyPersonnelPoints(monthPointers, rowsBySourceFile, month);
+  const monthlyPoints = buildMonthlyPersonnelPoints(monthRaw, month);
 
   return {
     rows,
@@ -458,50 +452,4 @@ export async function getPersonalReportsData(projectCode: string, date: string):
     pivotRows,
     monthlyPoints,
   };
-}
-
-export async function exportPersonalReportsMonthlyCsv(projectCode: string, month: string): Promise<{ fileName: string; content: string }> {
-  const pointers = await fetchMonthReportPointers(projectCode, month);
-  const sourceFileIds = Array.from(new Set(pointers.map((pointer) => pointer.active_file_id)));
-  const snapshotRows = await fetchSnapshotRowsBySourceFiles(sourceFileIds);
-  const reportDateBySourceFile = new Map(pointers.map((pointer) => [pointer.active_file_id, pointer.report_date]));
-
-  const monthlyRows = buildMonthlyHoursRows(
-    snapshotRows
-      .map((row) => {
-        const reportDate = reportDateBySourceFile.get(row.source_file_id);
-        return reportDate ? toMonthlyAttendanceRecord(row, reportDate) : null;
-      })
-      .filter((row): row is MonthlyAttendanceRecord => row !== null),
-    month
-  );
-
-  const range = monthRange(month);
-  const dayCount = Number(range?.end.slice(8, 10) || "0");
-  const dayColumns = Array.from({ length: dayCount }, (_, index) => String(index + 1).padStart(2, "0"));
-
-  const header = ["Employee ID", "Full Name", "Discipline", "Segment", ...dayColumns, "Total Hours"];
-  const csvRows = [
-    header.join(","),
-    ...monthlyRows.map((row) =>
-      [
-        escapeCsv(row.employee_id),
-        escapeCsv(row.full_name),
-        escapeCsv(row.discipline),
-        escapeCsv(row.segment),
-        ...dayColumns.map((day) => escapeCsv(row.days[day] == null ? "" : String(row.days[day]))),
-        escapeCsv(String(row.total_hours)),
-      ].join(",")
-    ),
-  ];
-
-  return {
-    fileName: `${projectCode}-MonthlyHours-${month}.csv`,
-    content: csvRows.join("\n"),
-  };
-}
-
-function escapeCsv(value: string): string {
-  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
 }
